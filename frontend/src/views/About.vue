@@ -1,24 +1,23 @@
 <template>
-  <div class="about">
+  <section class="about">
     <el-card>
       <template #header>
-        <div class="card-header">
-          <span>关于系统</span>
-        </div>
+        <div class="card-header">关于系统</div>
       </template>
+
       <h2>UAV 无人机巡检系统</h2>
-      <p>版本：1.0.0</p>
-      
+      <p>当前框架版本：Vue 3 + Django</p>
+
       <el-divider />
-      
+
       <h3>系统简介</h3>
       <p>
-        这是一个现代化的无人机巡检管理系统，集成了先进的飞行控制、数据处理和可视化分析技术。
-        系统支持多种巡检任务，包括电力设施巡检、建筑监测、农业管理等应用场景。
+        这是一个面向无人机巡检业务的管理系统基础框架，支持设备管理、任务管理、
+        运行状态统计和 RESTful API 扩展。
       </p>
 
-      <h3>主要功能特性</h3>
-      <el-tree :data="features" node-key="id" />
+      <h3>主要模块</h3>
+      <el-tree :data="features" node-key="id" default-expand-all />
 
       <el-divider />
 
@@ -29,54 +28,54 @@
           <ul>
             <li>Vue 3</li>
             <li>Vite</li>
-            <li>Pinia (状态管理)</li>
-            <li>Element Plus (UI 组件库)</li>
+            <li>Pinia</li>
+            <li>Element Plus</li>
+            <li>Axios</li>
           </ul>
         </el-col>
         <el-col :xs="24" :sm="12">
           <h4>后端</h4>
           <ul>
-            <li>Spring Boot</li>
-            <li>JDK 1.8</li>
-            <li>MySQL/PostgreSQL</li>
-            <li>Redis (缓存)</li>
+            <li>Django</li>
+            <li>Django REST Framework</li>
+            <li>django-cors-headers</li>
+            <li>SQLite 默认开发库，可扩展 MySQL</li>
           </ul>
         </el-col>
       </el-row>
     </el-card>
-  </div>
+  </section>
 </template>
 
 <script setup>
 import { ref } from 'vue'
-import { ElCard, ElDivider, ElTree, ElRow, ElCol } from 'element-plus'
 
 const features = ref([
   {
     id: 1,
     label: '任务管理',
     children: [
-      { id: 11, label: '创建和编辑巡检任务' },
-      { id: 12, label: '任务调度和分配' },
-      { id: 13, label: '进度监控' }
+      { id: 11, label: '创建、编辑和删除巡检任务' },
+      { id: 12, label: '按设备和状态查询任务' },
+      { id: 13, label: '记录任务进度和计划时间' }
     ]
   },
   {
     id: 2,
     label: '设备管理',
     children: [
-      { id: 21, label: '设备注册和配置' },
-      { id: 22, label: '实时状态监控' },
-      { id: 23, label: '远程控制' }
+      { id: 21, label: '维护无人机设备档案' },
+      { id: 22, label: '跟踪在线状态和电量' },
+      { id: 23, label: '按设备编号查询详情' }
     ]
   },
   {
     id: 3,
-    label: '数据分析',
+    label: '统计概览',
     children: [
-      { id: 31, label: '巡检数据收集' },
-      { id: 32, label: '图表统计分析' },
-      { id: 33, label: '报告生成' }
+      { id: 31, label: '任务总数和完成数量' },
+      { id: 32, label: '活跃任务数量' },
+      { id: 33, label: '设备总数和在线设备数量' }
     ]
   }
 ])
@@ -89,25 +88,29 @@ const features = ref([
 
 .card-header {
   font-size: 1.1rem;
-  font-weight: bold;
+  font-weight: 700;
 }
 
 h2 {
-  color: #303133;
   margin-top: 0;
+  color: #303133;
 }
 
 h3 {
-  color: #606266;
   margin-top: 1.5rem;
+  color: #606266;
 }
 
 h4 {
-  color: #909399;
+  color: #606266;
+}
+
+p,
+ul {
+  line-height: 1.8;
 }
 
 ul {
   margin-left: 1.5rem;
-  line-height: 1.8;
 }
 </style>

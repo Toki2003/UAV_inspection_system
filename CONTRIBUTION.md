@@ -1,56 +1,63 @@
-# CONTRIBUTION
+# Contribution
 
-感谢您的贡献！以下是贡献指南。
+感谢参与 UAV 无人机巡检系统开发。
 
 ## 开发流程
 
-1. Fork 项目
-2. 创建特性分支 (`git checkout -b feature/AmazingFeature`)
-3. 提交更改 (`git commit -m 'Add some AmazingFeature'`)
-4. 推送到分支 (`git push origin feature/AmazingFeature`)
-5. 创建 Pull Request
+1. 创建功能分支：`git checkout -b feature/your-feature`
+2. 完成开发和本地验证
+3. 提交变更：`git commit -m "feat: add your feature"`
+4. 推送分支并创建 Pull Request
 
 ## 代码规范
 
 ### 前端
-- 遵循 Vue 3 官方风格指南
-- 使用 ESLint 进行代码检查
-- 组件命名使用 PascalCase
-- 变量命名使用 camelCase
+
+- 使用 Vue 3 Composition API。
+- 页面组件优先使用 `<script setup>`。
+- API 请求统一放在 `frontend/src/api`。
+- 路由配置统一放在 `frontend/src/router/index.js`。
+- 组件和页面命名使用 PascalCase，变量命名使用 camelCase。
 
 ### 后端
-- 遵循 Java 代码规范
-- 使用 Maven 进行依赖管理
-- 类名使用 PascalCase
-- 方法名使用 camelCase
-- 常量使用 UPPER_CASE
 
-## 提交消息
+- 使用 Django + Django REST Framework。
+- 业务模块放在 `backend/apps`。
+- 模型定义放在 `models.py`，序列化放在 `serializers.py`，接口视图放在 `views.py`。
+- 新增模型后执行 `python manage.py makemigrations` 和 `python manage.py migrate`。
+- API 返回统一使用 `apps.inspection.responses` 中的 `success` 和 `fail`。
 
-遵循以下格式:
-```
+## 提交信息
+
+推荐格式：
+
+```text
 <type>(<scope>): <subject>
-
-<body>
-
-<footer>
 ```
 
-Type 类型:
-- feat: 新功能
-- fix: 修复
-- docs: 文档
-- style: 代码风格
-- refactor: 重构
-- test: 测试
-- chore: 配置
+常用类型：
 
-## 问题报告
+- `feat`：新功能
+- `fix`：缺陷修复
+- `docs`：文档
+- `style`：格式调整
+- `refactor`：重构
+- `test`：测试
+- `chore`：工程配置
 
-请通过 GitHub Issues 报告问题，包含以下信息:
-- 问题描述
-- 复现步骤
-- 预期行为
-- 实际行为
-- 环境信息
+## 本地验证
 
+后端：
+
+```bash
+cd backend
+python manage.py check
+python manage.py test
+```
+
+前端：
+
+```bash
+cd frontend
+npm run build
+```

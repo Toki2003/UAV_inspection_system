@@ -1,18 +1,22 @@
 <template>
   <div class="app-container">
     <header class="app-header">
-      <h1>UAV 无人机巡检系统</h1>
-      <nav class="nav">
-        <router-link to="/">首页</router-link>
-        <router-link to="/dashboard">仪表板</router-link>
-        <router-link to="/about">关于</router-link>
-      </nav>
+      <div class="header-inner">
+        <h1>UAV 无人机巡检系统</h1>
+        <nav class="nav">
+          <router-link to="/">首页</router-link>
+          <router-link to="/dashboard">仪表盘</router-link>
+          <router-link to="/about">关于</router-link>
+        </nav>
+      </div>
     </header>
+
     <main class="app-main">
       <router-view />
     </main>
+
     <footer class="app-footer">
-      <p>&copy; 2024 UAV 巡检系统 - 版权所有</p>
+      <p>&copy; 2026 UAV 巡检系统</p>
     </footer>
   </div>
 </template>
@@ -25,42 +29,53 @@
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
 }
 
 .app-header {
-  background-color: #303133;
-  color: white;
+  background: #243447;
+  color: #fff;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.header-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  max-width: 1200px;
+  margin: 0 auto;
   padding: 1rem 2rem;
-  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
 }
 
 .app-header h1 {
-  margin: 0 0 1rem 0;
-  font-size: 1.5rem;
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
 }
 
 .nav {
   display: flex;
-  gap: 2rem;
+  flex-wrap: wrap;
+  gap: 1rem;
 }
 
 .nav a {
-  color: white;
+  color: rgba(255, 255, 255, 0.82);
   text-decoration: none;
-  transition: color 0.3s;
+  transition: color 0.2s;
 }
 
+.nav a.router-link-active,
 .nav a:hover {
-  color: #409eff;
+  color: #8bd3dd;
 }
 
 .app-main {
   flex: 1;
-  padding: 2rem;
+  width: 100%;
   max-width: 1200px;
   margin: 0 auto;
-  width: 100%;
+  padding: 2rem;
 }
 
 .app-footer {
@@ -73,5 +88,17 @@
 
 .app-footer p {
   margin: 0;
+}
+
+@media (max-width: 768px) {
+  .header-inner {
+    align-items: flex-start;
+    flex-direction: column;
+    padding: 1rem;
+  }
+
+  .app-main {
+    padding: 1rem;
+  }
 }
 </style>
