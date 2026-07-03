@@ -86,6 +86,8 @@ class InspectionTask(TimeStampedModel):
 
     def __str__(self):
         return self.name
+
+
 class Alert(models.Model):
     """告警记录模型"""
     

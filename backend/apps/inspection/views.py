@@ -6,8 +6,7 @@ from .models import Device, InspectionTask
 from .responses import fail, success
 from .serializers import DeviceSerializer, InspectionTaskSerializer
 
-from .models import Device, InspectionTask, Alert
-from .serializers import DeviceSerializer, InspectionTaskSerializer, AlertSerializer
+
 @api_view(["GET"])
 def overview(request):
     total_tasks = InspectionTask.objects.count()
@@ -136,18 +135,171 @@ def inspection_by_device(request, device_id):
 def inspection_by_status(request, status):
     queryset = InspectionTask.objects.filter(status=status).select_related("device")
     return success("获取任务成功", InspectionTaskSerializer(queryset, many=True).data)
+
+
+# ── 登录认证（预留接口，当前使用 mock 数据） ──────────────────────
+
+import hashlib
+import time
+
+# Mock 用户数据 —— 以后接入真实数据库时替换为 User 模型查询
+MOCK_USERS = {
+    "admin": {
+        "id": 1,
+        "username": "admin",
+        "password": "admin123",
+        "nickname": "系统管理员",
+        "email": "admin@uav.com",
+        "phone": "13800000000",
+        "role": "admin",
+    },
+    "user": {
+        "id": 2,
+        "username": "user",
+        "password": "user123",
+        "nickname": "普通用户",
+        "email": "user@uav.com",
+        "phone": "13800000001",
+        "role": "user",
+    },
+}
+
+
+@api_view(["POST"])
+def login(request):
+    """用户登录 —— POST /api/auth/login"""
+    username = (request.data.get("username") or "").strip()
+    password = (request.data.get("password") or "").strip()
+
+    if not username:
+        return fail("用户名不能为空")
+    if not password:
+        return fail("密码不能为空")
+
+    user = MOCK_USERS.get(username)
+    if not user or user["password"] != password:
+        return fail("用户名或密码错误")
+
+    # 生成简单 token（生产环境应使用 JWT）
+    token = "tk_" + hashlib.md5(
+        f"{user['id']}_{username}_{time.time()}".encode()
+    ).hexdigest()
+
+    user_info = {k: v for k, v in user.items() if k != "password"}
+
+    # 记录 token → 用户映射（mock，生产环境用 JWT 解析）
+    _TOKEN_STORE[token] = user_info
+
+    return success("登录成功", {"token": token, "user": user_info})
+
+
+@api_view(["POST"])
+def logout(request):
+    """用户登出 —— POST /api/auth/logout"""
+    token = _get_token(request)
+    if token:
+        _TOKEN_STORE.pop(token, None)
+    return success("退出成功")
+
+
+@api_view(["GET"])
+def userinfo(request):
+    """获取当前登录用户信息 —— GET /api/auth/userinfo"""
+    token = _get_token(request)
+    user_info = _TOKEN_STORE.get(token)
+    if not user_info:
+        return fail("请先登录", code=401)
+    return success("获取用户信息成功", user_info)
+
+
+# ── 用户管理 CRUD（预留接口，当前使用 mock 数据） ──────────────────
+
+@api_view(["GET"])
+def user_list(request):
+    """用户列表 —— GET /api/user/list"""
+    users = [
+        {k: v for k, v in u.items() if k != "password"}
+        for u in MOCK_USERS.values()
+    ]
+    return success("获取用户列表成功", users)
+
+
+@api_view(["POST"])
+def user_create(request):
+    """创建用户 —— POST /api/user/create"""
+    username = (request.data.get("username") or "").strip()
+    if not username:
+        return fail("用户名不能为空")
+    if username in MOCK_USERS:
+        return fail("用户名已存在")
+
+    new_id = max(u["id"] for u in MOCK_USERS.values()) + 1
+    MOCK_USERS[username] = {
+        "id": new_id,
+        "username": username,
+        "password": request.data.get("password", "123456"),
+        "nickname": request.data.get("nickname", username),
+        "email": request.data.get("email", ""),
+        "phone": request.data.get("phone", ""),
+        "role": request.data.get("role", "user"),
+    }
+    user_info = {k: v for k, v in MOCK_USERS[username].items() if k != "password"}
+    return success("创建用户成功", user_info)
+
+
+@api_view(["PUT"])
+def user_update(request, pk):
+    """编辑用户 —— PUT /api/user/<pk>"""
+    for uname, u in MOCK_USERS.items():
+        if u["id"] == pk:
+            for field in ("nickname", "email", "phone", "role"):
+                if field in request.data:
+                    u[field] = request.data[field]
+            if "password" in request.data and request.data["password"]:
+                u["password"] = request.data["password"]
+            user_info = {k: v for k, v in u.items() if k != "password"}
+            return success("更新用户成功", user_info)
+    return fail("用户不存在")
+
+
+@api_view(["DELETE"])
+def user_delete(request, pk):
+    """删除用户 —— DELETE /api/user/<pk>"""
+    for uname, u in list(MOCK_USERS.items()):
+        if u["id"] == pk:
+            del MOCK_USERS[uname]
+            return success("删除用户成功")
+    return fail("用户不存在")
+
+
+# ── 告警管理（DRF ViewSet） ──────────────────────────────────────
+
 from rest_framework import viewsets, filters
 from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework.response import Response
-from rest_framework.decorators import action
-from django.shortcuts import get_object_or_404
+from .models import Alert
+from .serializers import AlertSerializer
+
 
 class AlertViewSet(viewsets.ModelViewSet):
     """告警管理视图"""
     queryset = Alert.objects.all().order_by('-alert_time')
     serializer_class = AlertSerializer
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ['status', 'detect_type', 'task']   
-    search_fields = ['description', 'route_name', 'location']  
+    filterset_fields = ['status', 'detect_type', 'task']
+    search_fields = ['description', 'route_name', 'location']
     ordering_fields = ['alert_time', 'status']
-    ordering = ['-alert_time']  
+    ordering = ['-alert_time']
+
+
+# ── 内部工具函数 ──────────────────────────────────────────────────
+
+# token → 用户信息映射（mock，生产环境用 JWT）
+_TOKEN_STORE = {}
+
+
+def _get_token(request):
+    """从 Authorization 请求头中提取 token"""
+    auth = request.META.get("HTTP_AUTHORIZATION", "")
+    if auth.startswith("Bearer "):
+        return auth[7:]
+    return auth

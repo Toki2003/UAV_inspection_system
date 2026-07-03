@@ -1,13 +1,16 @@
 <template>
   <div class="app-container">
-    <header class="app-header">
+    <header class="app-header" v-if="isAuthenticated">
       <div class="header-inner">
         <h1>UAV 无人机巡检系统</h1>
         <nav class="nav">
           <router-link to="/">首页</router-link>
           <router-link to="/dashboard">仪表盘</router-link>
-          <router-link to="/about">关于</router-link>
           <router-link to="/alert">告警管理</router-link>
+          <router-link to="/about">关于</router-link>
+          <span class="nav-divider">|</span>
+          <span class="user-info">{{ store.user?.nickname || '用户' }}</span>
+          <el-button type="danger" size="small" plain @click="handleLogout">退出登录</el-button>
         </nav>
       </div>
     </header>
@@ -16,13 +19,30 @@
       <router-view />
     </main>
 
-    <footer class="app-footer">
+    <footer class="app-footer" v-if="isAuthenticated">
       <p>&copy; 2026 UAV 巡检系统</p>
     </footer>
   </div>
 </template>
 
 <script setup>
+import { computed } from 'vue'
+import { useRouter } from 'vue-router'
+import { ElMessage } from 'element-plus'
+import loginApi from './api/login'
+import { useAppStore } from './store'
+
+const router = useRouter()
+const store = useAppStore()
+
+const isAuthenticated = computed(() => !!store.token)
+
+const handleLogout = async () => {
+  await loginApi.logout()
+  store.clearAuth()
+  ElMessage.success('已退出登录')
+  router.push('/login')
+}
 </script>
 
 <style scoped>
@@ -58,6 +78,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 1rem;
+  align-items: center;
 }
 
 .nav a {
@@ -69,6 +90,15 @@
 .nav a.router-link-active,
 .nav a:hover {
   color: #8bd3dd;
+}
+
+.nav-divider {
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.user-info {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.875rem;
 }
 
 .app-main {
