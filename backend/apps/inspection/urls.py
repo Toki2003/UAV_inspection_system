@@ -29,4 +29,11 @@ urlpatterns = [
     path("user/delete/<int:pk>", views.user_delete),
     # 告警管理（DRF Router）
     path('', include(router.urls)),
+    #机场监控
+    path("drone-control/docks/overview",views.dock_overview,),
+    path("drone-control/docks/list",views.dock_list,),
+   # 无人机实时管控
+    path("drone-control/<str:device_code>/telemetry",views.drone_telemetry),
+    path("drone-control/<str:device_code>/video",views.drone_video),
+    path("drone-control/<str:device_code>/command",views.drone_command),
 ]
