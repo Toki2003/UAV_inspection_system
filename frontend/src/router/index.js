@@ -7,19 +7,25 @@ const routes = [
     path: '/login',
     name: 'Login',
     component: Login,
-    meta: { public: true }       // 不需要登录就能访问
+    meta: { public: true }
   },
   {
     path: '/',
     name: 'Home',
     component: Home,
-    meta: { requiresAuth: true }  // 需要登录
+    meta: { requiresAuth: true }
   },
   {
     path: '/dashboard',
     name: 'Dashboard',
     component: () => import('../views/Dashboard.vue'),
     meta: { requiresAuth: true }
+  },
+  {
+    path: '/alert',
+    name: 'AlertManage',
+    component: () => import('@/views/AlertManage/index.vue'),
+    meta: { title: '告警管理', requiresAuth: true }
   },
   {
     path: '/about',
@@ -39,10 +45,8 @@ router.beforeEach((to, from, next) => {
   const token = localStorage.getItem('token')
 
   if (to.meta.public) {
-    // 公共页面（登录页）：已登录则跳首页
     token ? next('/') : next()
   } else {
-    // 需要登录的页面：没 token 跳登录页
     token ? next() : next('/login')
   }
 })

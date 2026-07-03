@@ -272,6 +272,25 @@ def user_delete(request, pk):
     return fail("用户不存在")
 
 
+# ── 告警管理（DRF ViewSet） ──────────────────────────────────────
+
+from rest_framework import viewsets, filters
+from django_filters.rest_framework import DjangoFilterBackend
+from .models import Alert
+from .serializers import AlertSerializer
+
+
+class AlertViewSet(viewsets.ModelViewSet):
+    """告警管理视图"""
+    queryset = Alert.objects.all().order_by('-alert_time')
+    serializer_class = AlertSerializer
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ['status', 'detect_type', 'task']
+    search_fields = ['description', 'route_name', 'location']
+    ordering_fields = ['alert_time', 'status']
+    ordering = ['-alert_time']
+
+
 # ── 内部工具函数 ──────────────────────────────────────────────────
 
 # token → 用户信息映射（mock，生产环境用 JWT）

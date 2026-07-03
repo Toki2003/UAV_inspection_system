@@ -1,7 +1,9 @@
-from django.urls import path
-
+from django.urls import path, include
+from rest_framework.routers import DefaultRouter
 from . import views
 
+router = DefaultRouter()
+router.register(r'alert', views.AlertViewSet, basename='alert')
 
 urlpatterns = [
     path("overview/", views.overview),
@@ -25,4 +27,6 @@ urlpatterns = [
     path("user/create", views.user_create),
     path("user/<int:pk>", views.user_update),
     path("user/delete/<int:pk>", views.user_delete),
+    # 告警管理（DRF Router）
+    path('', include(router.urls)),
 ]

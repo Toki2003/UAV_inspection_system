@@ -6,6 +6,7 @@
         <nav class="nav">
           <router-link to="/">首页</router-link>
           <router-link to="/dashboard">仪表盘</router-link>
+          <router-link to="/alert">告警管理</router-link>
           <router-link to="/about">关于</router-link>
           <span class="nav-divider">|</span>
           <span class="user-info">{{ store.user?.nickname || '用户' }}</span>
@@ -77,6 +78,7 @@ const handleLogout = async () => {
   display: flex;
   flex-wrap: wrap;
   gap: 1rem;
+  align-items: center;
 }
 
 .nav a {
