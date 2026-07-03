@@ -7,6 +7,7 @@
           <router-link to="/">首页</router-link>
           <router-link to="/dashboard">仪表盘</router-link>
           <router-link to="/about">关于</router-link>
+          <router-link to="/alert">告警管理</router-link>
         </nav>
       </div>
     </header>

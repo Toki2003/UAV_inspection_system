@@ -6,7 +6,8 @@ from .models import Device, InspectionTask
 from .responses import fail, success
 from .serializers import DeviceSerializer, InspectionTaskSerializer
 
-
+from .models import Device, InspectionTask, Alert
+from .serializers import DeviceSerializer, InspectionTaskSerializer, AlertSerializer
 @api_view(["GET"])
 def overview(request):
     total_tasks = InspectionTask.objects.count()
@@ -135,3 +136,18 @@ def inspection_by_device(request, device_id):
 def inspection_by_status(request, status):
     queryset = InspectionTask.objects.filter(status=status).select_related("device")
     return success("获取任务成功", InspectionTaskSerializer(queryset, many=True).data)
+from rest_framework import viewsets, filters
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework.response import Response
+from rest_framework.decorators import action
+from django.shortcuts import get_object_or_404
+
+class AlertViewSet(viewsets.ModelViewSet):
+    """告警管理视图"""
+    queryset = Alert.objects.all().order_by('-alert_time')
+    serializer_class = AlertSerializer
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ['status', 'detect_type', 'task']   
+    search_fields = ['description', 'route_name', 'location']  
+    ordering_fields = ['alert_time', 'status']
+    ordering = ['-alert_time']  

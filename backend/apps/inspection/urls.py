@@ -1,6 +1,10 @@
-from django.urls import path
-
+from django.urls import path,include
+from rest_framework.routers import DefaultRouter
 from . import views
+
+router = DefaultRouter()
+
+router.register(r'alert', views.AlertViewSet, basename='alert')
 
 
 urlpatterns = [
@@ -16,4 +20,5 @@ urlpatterns = [
     path("inspection/device/<int:device_id>", views.inspection_by_device),
     path("inspection/status/<str:status>", views.inspection_by_status),
     path("inspection/<int:pk>", views.inspection_detail),
+    path('', include(router.urls)),
 ]

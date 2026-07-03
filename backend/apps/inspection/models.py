@@ -86,3 +86,44 @@ class InspectionTask(TimeStampedModel):
 
     def __str__(self):
         return self.name
+class Alert(models.Model):
+    """告警记录模型"""
+    
+    task = models.ForeignKey(
+        InspectionTask,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name="关联任务"
+    )
+    
+    route_name = models.CharField(max_length=100, verbose_name="航线名称")
+    alert_time = models.DateTimeField(auto_now_add=True, verbose_name="告警时间")
+    
+    DETECT_TYPES = [
+        ('obstacle', '障碍物'),
+        ('defect', '缺陷'),
+        ('anomaly', '异常行为'),
+        ('other', '其他'),
+    ]
+    detect_type = models.CharField(max_length=20, choices=DETECT_TYPES, default='other', verbose_name="检测类型")
+    description = models.TextField(verbose_name="告警描述")
+    location = models.CharField(max_length=200, verbose_name="位置信息")
+    
+    STATUS_CHOICES = [
+        ('pending', '待处理'),
+        ('processing', '处理中'),
+        ('resolved', '已解决'),
+        ('ignored', '已忽略'),
+    ]
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending', verbose_name="处理状态")
+    
+    remark = models.CharField(max_length=200, blank=True, verbose_name="备注")
+
+    def __str__(self):
+        return f"{self.route_name} - {self.alert_time}"
+
+    class Meta:
+        db_table = 'inspection_alert'
+        verbose_name = '告警记录'
+        verbose_name_plural = verbose_name

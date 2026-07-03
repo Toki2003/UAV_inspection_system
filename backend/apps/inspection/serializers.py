@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import Device, InspectionTask
+from .models import Device, InspectionTask,Alert
 
 
 class DeviceSerializer(serializers.ModelSerializer):
@@ -47,3 +47,12 @@ class InspectionTaskSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         ]
+
+class AlertSerializer(serializers.ModelSerializer):
+   
+    task_name = serializers.CharField(source='task.name', read_only=True, allow_null=True)
+
+    class Meta:
+        model = Alert
+        fields = '__all__'  
+        read_only_fields = ['id', 'alert_time']  
