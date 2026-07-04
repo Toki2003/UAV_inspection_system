@@ -38,6 +38,18 @@ const routes = [
     meta: { title: '告警管理', requiresAuth: true }
   },
   {
+    path: '/inspection-tasks',
+    name: 'InspectionTasks',
+    component: () => import('@/views/InspectionTasks.vue'),
+    meta: { title: '巡检任务', requiresAuth: true }
+  },
+  {
+    path: '/inspection-tasks/:id',
+    name: 'InspectionTaskDetail',
+    component: () => import('@/views/InspectionTaskDetail.vue'),
+    meta: { title: '巡检任务详情', requiresAuth: true }
+  },
+  {
     path: '/system',
     name: 'SystemManage',
     component: () => import('@/views/SystemManage/index.vue'),

@@ -8,6 +8,7 @@
           <router-link to="/dashboard">仪表盘</router-link>
           <router-link to="/drone-control">无人机管控</router-link>
           <router-link to="/alert">告警管理</router-link>
+          <router-link to="/inspection-tasks">巡检任务</router-link>
           <router-link to="/system">系统管理</router-link>
           <router-link to="/about">关于</router-link>
           <span class="nav-divider">|</span>
