@@ -11,11 +11,15 @@ from .models import Role, SysUser
 
 
 class RoleSerializer(serializers.ModelSerializer):
-    """角色序列化器"""
+    """
+    角色序列化器
+
+    permissions: 权限码列表，如 ['system:view', 'role:create']
+    """
 
     class Meta:
         model = Role
-        fields = ['id', 'name', 'desc', 'create_time']
+        fields = ['id', 'name', 'desc', 'permissions', 'create_time']
 
 
 class SysUserSerializer(serializers.ModelSerializer):

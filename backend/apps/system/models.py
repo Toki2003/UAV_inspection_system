@@ -8,6 +8,7 @@ RBAC 权限体系：用户 -> 角色
 
 from django.db import models
 from django.contrib.auth.models import AbstractUser
+import json
 
 
 class Role(models.Model):
@@ -15,10 +16,12 @@ class Role(models.Model):
     角色模型
 
     用户通过 role 外键关联角色，实现基于角色的权限控制。
+    permissions: JSON 字段存储权限码列表，如 ['system:view', 'role:create']
     """
 
     name = models.CharField(max_length=32, unique=True, verbose_name='角色名称')
     desc = models.CharField(max_length=128, blank=True, verbose_name='角色说明')
+    permissions = models.JSONField(default=list, blank=True, verbose_name='权限码列表')
     create_time = models.DateTimeField(auto_now_add=True, verbose_name='创建时间')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='更新时间')
 

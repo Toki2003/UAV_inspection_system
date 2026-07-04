@@ -130,6 +130,11 @@ const handleDelete = async (row) => {
   try {
     await deleteRole(row.id)
     ElMessage.success('删除成功')
+    
+    // 注意：角色删除后，不需要刷新当前用户的权限
+    // 因为角色删除不影响其他用户的权限
+    // 只有当用户自己的角色被删除时，才需要重新登录
+    
     loadRoles()
   } catch (err) {
     ElMessage.error(err.response?.data?.message || '删除失败')
