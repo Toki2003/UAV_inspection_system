@@ -19,7 +19,7 @@
         刷新
       </el-button>
 
-      <el-button v-permission="'system:user:add'" type="success" @click="handleAdd">
+      <el-button v-permission="'user:create'" type="success" @click="handleAdd">
         添加用户
       </el-button>
     </div>
@@ -50,7 +50,7 @@
         <template #default="{ row }">
 
           <el-button
-            v-permission="'system:user:edit'"
+            v-permission="'user:update'"
             size="small"
             type="primary"
             @click="handleEdit(row)"
@@ -59,7 +59,7 @@
           </el-button>
 
           <el-button
-            v-permission="'system:user:delete'"
+            v-permission="'user:delete'"
             v-if="row.id !== currentUserId"
             size="small"
             type="danger"
@@ -91,7 +91,7 @@
           <el-input v-model="form.password" type="password" show-password placeholder="请输入密码" />
         </el-form-item>
 
-        <el-form-item label="角色">
+        <el-form-item label="角色" v-if="!isSelfEdit">
           <el-select v-model="form.role_id" placeholder="请选择角色" clearable style="width: 100%">
             <el-option
               v-for="r in roleList"
@@ -102,18 +102,34 @@
           </el-select>
         </el-form-item>
 
+        <el-alert
+          v-else
+          title="不能修改自己的角色信息"
+          type="info"
+          :closable="false"
+          show-icon
+        />
+
         <el-form-item label="电话">
           <el-input v-model="form.phone" />
         </el-form-item>
 
-        <el-form-item label="状态">
+        <el-form-item label="状态" v-if="!isSelfEdit">
           <el-switch v-model="form.is_active" />
         </el-form-item>
+
+        <el-alert
+          v-else
+          title="不能修改自己的激活状态"
+          type="warning"
+          :closable="false"
+          show-icon
+        />
 
       </el-form>
 
       <template #footer>
-        <el-button @click="editVisible = false">取消</el-button>
+        <el-button @click="handleCancel">取消</el-button>
         <el-button type="primary" @click="handleSave" :loading="loading">
           保存
         </el-button>
@@ -138,6 +154,7 @@ import {
   getRoleList
 } from '@/api/system'
 
+// ================= 状态 =================
 const store = useAppStore()
 const list = ref([])
 const loading = ref(false)
@@ -145,6 +162,7 @@ const search = ref('')
 
 const editVisible = ref(false)
 const roleList = ref([])
+const isSelfEdit = ref(false) // 是否正在编辑当前登录用户自己
 
 const form = reactive({
   id: null,
@@ -186,6 +204,7 @@ onMounted(() => {
 })
 
 const handleAdd = () => {
+  // 完全重置表单状态
   Object.assign(form, {
     id: null,
     username: '',
@@ -195,6 +214,10 @@ const handleAdd = () => {
     phone: '',
     is_active: true
   })
+  
+  // 重要：重置自我保护标志
+  isSelfEdit.value = false
+  
   loadRoles() // 打开弹窗时刷新角色列表，确保新增的角色能同步显示
   editVisible.value = true
 }
@@ -209,6 +232,10 @@ const handleEdit = (row) => {
     phone: row.phone,
     is_active: row.is_active
   })
+  
+  // 判断是否正在编辑自己
+  isSelfEdit.value = row.id === currentUserId.value
+  
   loadRoles() // 打开弹窗时刷新角色列表
   editVisible.value = true
 }
@@ -217,6 +244,13 @@ const handleSave = async () => {
   loading.value = true
   try {
     const payload = { ...form }
+    
+    // 自我保护：如果编辑的是自己，不发送 role_id 和 is_active 字段
+    if (isSelfEdit.value) {
+      delete payload.role_id
+      delete payload.is_active
+    }
+    
     // 编辑时不发送空密码
     if (payload.id && !payload.password) {
       delete payload.password
@@ -232,7 +266,21 @@ const handleSave = async () => {
       ElMessage.success('新增成功')
     }
 
+    // 关闭弹窗并重置所有状态
     editVisible.value = false
+    isSelfEdit.value = false
+    
+    // 重置表单
+    Object.assign(form, {
+      id: null,
+      username: '',
+      real_name: '',
+      password: '',
+      role_id: null,
+      phone: '',
+      is_active: true
+    })
+    
     await loadUsers()
   } catch (err) {
     ElMessage.error(err.response?.data?.message || err.message || '操作失败')
@@ -263,6 +311,23 @@ const handleDelete = async (row) => {
   } catch (err) {
     ElMessage.error(err.response?.data?.message || '删除失败')
   }
+}
+
+const handleCancel = () => {
+  // 关闭弹窗时重置所有状态
+  editVisible.value = false
+  isSelfEdit.value = false
+  
+  // 重置表单（可选，但推荐）
+  Object.assign(form, {
+    id: null,
+    username: '',
+    real_name: '',
+    password: '',
+    role_id: null,
+    phone: '',
+    is_active: true
+  })
 }
 </script>
 
