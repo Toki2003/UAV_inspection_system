@@ -1,67 +1,50 @@
 <template>
   <div class="login-container">
-    <div class="login-box">
-      <!-- 标题 -->
-      <div class="login-header">
-        <h1>UAV 无人机巡检系统</h1>
-        <p>欢迎登录管理系统</p>
-      </div>
-
-      <!-- 登录表单 -->
+    <div class="login-card">
+      <h2 class="login-title">UAV 无人机巡检系统</h2>
       <el-form
         ref="formRef"
         :model="form"
         :rules="rules"
-        class="login-form"
+        label-width="0"
+        autocomplete="off"
         @keyup.enter="handleLogin"
       >
         <el-form-item prop="username">
           <el-input
             v-model="form.username"
-            placeholder="请输入账号"
+            placeholder="请输入用户名"
+            :prefix-icon="User"
             size="large"
-          >
-            <template #prefix>
-              <el-icon><User /></el-icon>
-            </template>
-          </el-input>
+            autocomplete="off"
+          />
         </el-form-item>
-
         <el-form-item prop="password">
           <el-input
             v-model="form.password"
             type="password"
             placeholder="请输入密码"
+            :prefix-icon="Lock"
             size="large"
             show-password
-          >
-            <template #prefix>
-              <el-icon><Lock /></el-icon>
-            </template>
-          </el-input>
+            autocomplete="new-password"
+          />
         </el-form-item>
-
         <el-form-item>
           <el-button
             type="primary"
             size="large"
             :loading="loading"
-            class="login-btn"
+            style="width: 100%"
             @click="handleLogin"
           >
-            {{ loading ? '登录中...' : '登录系统' }}
+            登 录
           </el-button>
         </el-form-item>
       </el-form>
-
-      <!-- 测试账号提示 -->
-      <div class="login-footer">
-        <el-alert
-          title="测试账号：admin / admin123"
-          type="info"
-          :closable="false"
-          show-icon
-        />
+      <div class="login-tips">
+        <p>管理员：admin / admin123</p>
+        <p>普通用户：user / user123</p>
       </div>
     </div>
   </div>
@@ -72,11 +55,12 @@ import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { User, Lock } from '@element-plus/icons-vue'
-import loginApi from '../api/login'
+import { login } from '../api/login'
 import { useAppStore } from '../store'
 
 const router = useRouter()
 const store = useAppStore()
+
 const formRef = ref(null)
 const loading = ref(false)
 
@@ -95,7 +79,6 @@ const rules = {
 
 const handleLogin = async () => {
   if (!formRef.value) return
-
   try {
     await formRef.value.validate()
   } catch {
@@ -103,19 +86,23 @@ const handleLogin = async () => {
   }
 
   loading.value = true
-  try {
-    const data = await loginApi.login(form.username, form.password)
 
-    // 保存到 store 和 localStorage
+  try {
+    // 登录前先清除可能残留的旧 token，避免脏数据干扰
+    store.clearAuth()
+
+    const data = await login(form.username, form.password)
+
+    // 1. 保存 token / user / permissions 到 store
     store.setToken(data.token)
     store.setUser(data.user)
-    localStorage.setItem('token', data.token)
-    localStorage.setItem('user', JSON.stringify(data.user))
+    store.setPermissions(data?.permissions || [])
 
+    // 2. 跳转首页（router guard 会触发 permissionStore.generateRoutes）
     ElMessage.success('登录成功')
     router.push('/')
   } catch (err) {
-    ElMessage.error(err.message || '登录失败，请检查用户名和密码')
+    ElMessage.error(err.message || '登录失败')
   } finally {
     loading.value = false
   }
@@ -125,51 +112,38 @@ const handleLogin = async () => {
 <style scoped>
 .login-container {
   display: flex;
-  justify-content: center;
   align-items: center;
+  justify-content: center;
   min-height: 100vh;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 }
 
-.login-box {
-  width: 420px;
+.login-card {
+  width: 400px;
   padding: 40px;
   background: white;
   border-radius: 12px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
 }
 
-.login-header {
+.login-title {
   text-align: center;
-  margin-bottom: 40px;
-}
-
-.login-header h1 {
-  font-size: 24px;
+  margin-bottom: 30px;
   color: #303133;
-  margin: 0 0 10px 0;
+  font-size: 24px;
   font-weight: 600;
 }
 
-.login-header p {
-  font-size: 14px;
-  color: #909399;
-  margin: 0;
-}
-
-.login-btn {
-  width: 100%;
-  margin-top: 10px;
-}
-
-.login-footer {
+.login-tips {
   margin-top: 20px;
+  padding: 12px;
+  background: #f5f7fa;
+  border-radius: 6px;
+  font-size: 13px;
+  color: #909399;
 }
 
-@media (max-width: 768px) {
-  .login-box {
-    width: 90%;
-    padding: 30px 20px;
-  }
+.login-tips p {
+  margin: 4px 0;
 }
 </style>

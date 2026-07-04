@@ -1,161 +1,70 @@
 /**
- * 系统管理 API（MOCK 版本）
- * 用于前端独立开发，不依赖后端
+ * 系统管理 API
+ *
+ * 统一调用后端 /api/system/ 接口。
  */
+import request from './request'
 
-// ====================== MOCK 数据 ======================
+// ── 用户管理 ─────────────────────────────────────────────
 
-import { mockUsers, mockRoles, mockMenus } from '@/mock/system'
-
-// 模拟网络延迟
-const delay = (data) =>
-    new Promise(resolve => setTimeout(() => resolve(data), 300))
-
-// ====================== 通用封装 ======================
-
-function ok(data) {
-    return {
-        code: 200,
-        message: 'success',
-        data
-    }
+/** 获取用户列表 */
+export const getUserList = (params = {}) => {
+  return request.get('/system/users/', { params })
 }
 
-// ====================== 用户管理 ======================
-
-export function getUserList() {
-    return delay(
-        ok({
-            count: mockUsers.length,
-            results: mockUsers
-        })
-    )
+/** 获取用户详情 */
+export const getUserDetail = (id) => {
+  return request.get(`/system/users/${id}/`)
 }
 
-export function getUserDetail(id) {
-    const user = mockUsers.find(u => u.id === id)
-    return delay(ok(user || null))
+/** 创建用户 */
+export const createUser = (data) => {
+  return request.post('/system/users/', data)
 }
 
-export function createUser(data) {
-    const newUser = {
-        ...data,
-        id: Date.now()
-    }
-    mockUsers.push(newUser)
-
-    return delay(ok(newUser))
+/** 更新用户 */
+export const updateUser = (id, data) => {
+  return request.put(`/system/users/${id}/`, data)
 }
 
-export function updateUser(id, data) {
-    const index = mockUsers.findIndex(u => u.id === id)
-    if (index !== -1) {
-        mockUsers[index] = {
-            ...mockUsers[index],
-            ...data
-        }
-    }
-    return delay(ok(mockUsers[index]))
+/** 删除用户 */
+export const deleteUser = (id) => {
+  return request.delete(`/system/users/${id}/`)
 }
 
-export function deleteUser(id) {
-    const index = mockUsers.findIndex(u => u.id === id)
-    if (index !== -1) mockUsers.splice(index, 1)
-    return delay(ok(true))
+// ── 角色管理 ─────────────────────────────────────────────
+
+/** 获取角色列表 */
+export const getRoleList = () => {
+  return request.get('/system/roles/')
 }
 
-// ====================== 角色管理 ======================
-
-export function getRoleList() {
-    return delay(
-        ok({
-            count: mockRoles.length,
-            results: mockRoles
-        })
-    )
+/** 创建角色 */
+export const createRole = (data) => {
+  return request.post('/system/roles/', data)
 }
 
-export function createRole(data) {
-    const newRole = {
-        ...data,
-        id: Date.now()
-    }
-    mockRoles.push(newRole)
-
-    return delay(ok(newRole))
+/** 更新角色 */
+export const updateRole = (id, data) => {
+  return request.put(`/system/roles/${id}/`, data)
 }
 
-export function updateRole(id, data) {
-    const index = mockRoles.findIndex(r => r.id === id)
-    if (index !== -1) {
-        mockRoles[index] = {
-            ...mockRoles[index],
-            ...data
-        }
-    }
-    return delay(ok(mockRoles[index]))
+/** 删除角色 */
+export const deleteRole = (id) => {
+  return request.delete(`/system/roles/${id}/`)
 }
 
-export function deleteRole(id) {
-    const index = mockRoles.findIndex(r => r.id === id)
-    if (index !== -1) mockRoles.splice(index, 1)
-    return delay(ok(true))
-}
-
-// ====================== 菜单管理 ======================
-
-export function getMenuList() {
-    return delay(
-        ok({
-            count: mockMenus.length,
-            results: mockMenus
-        })
-    )
-}
-
-export function createMenu(data) {
-    const newMenu = {
-        ...data,
-        id: Date.now()
-    }
-    mockMenus.push(newMenu)
-
-    return delay(ok(newMenu))
-}
-
-export function updateMenu(id, data) {
-    const index = mockMenus.findIndex(m => m.id === id)
-    if (index !== -1) {
-        mockMenus[index] = {
-            ...mockMenus[index],
-            ...data
-        }
-    }
-    return delay(ok(mockMenus[index]))
-}
-
-export function deleteMenu(id) {
-    const index = mockMenus.findIndex(m => m.id === id)
-    if (index !== -1) mockMenus.splice(index, 1)
-    return delay(ok(true))
-}
-
-// ====================== 默认导出 ======================
+// ── 默认导出 ─────────────────────────────────────────────
 
 export default {
-    getUserList,
-    getUserDetail,
-    createUser,
-    updateUser,
-    deleteUser,
+  getUserList,
+  getUserDetail,
+  createUser,
+  updateUser,
+  deleteUser,
 
-    getRoleList,
-    createRole,
-    updateRole,
-    deleteRole,
-
-    getMenuList,
-    createMenu,
-    updateMenu,
-    deleteMenu
+  getRoleList,
+  createRole,
+  updateRole,
+  deleteRole
 }

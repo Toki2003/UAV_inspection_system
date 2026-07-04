@@ -1,9 +1,8 @@
 """
 权限管理模块 - 数据模型
 
-RBAC 权限体系：用户 -> 角色 -> 菜单
-- Menu: 系统菜单，支持树形结构
-- Role: 角色，绑定菜单实现权限控制
+RBAC 权限体系：用户 -> 角色
+- Role: 角色，用户通过关联角色获得权限
 - SysUser: 系统用户，继承 Django AbstractUser
 """
 
@@ -11,55 +10,17 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser
 
 
-class Menu(models.Model):
-    """
-    系统菜单模型
-
-    支持树形结构（parent 自关联），角色绑定菜单实现页面访问控制。
-    前端根据菜单数据动态渲染侧边栏导航。
-    """
-
-    title = models.CharField(max_length=32, verbose_name='菜单名称')
-    path = models.CharField(max_length=128, blank=True, verbose_name='前端路由')
-    icon = models.CharField(max_length=64, blank=True, verbose_name='菜单图标')
-    parent = models.ForeignKey(
-        'self',
-        on_delete=models.CASCADE,
-        null=True,
-        blank=True,
-        related_name='children',
-        verbose_name='父菜单'
-    )
-    sort = models.IntegerField(default=0, verbose_name='排序权重')
-    is_show = models.BooleanField(default=True, verbose_name='是否展示')
-    create_time = models.DateTimeField(auto_now_add=True, verbose_name='创建时间')
-
-    class Meta:
-        verbose_name = '系统菜单'
-        verbose_name_plural = verbose_name
-        ordering = ['sort']
-
-    def __str__(self):
-        return self.title
-
-
 class Role(models.Model):
     """
     角色模型
 
-    RBAC 权限核心，一个角色可绑定多个菜单（多对多）。
-    用户通过关联角色获得对应菜单访问权限。
+    用户通过 role 外键关联角色，实现基于角色的权限控制。
     """
 
     name = models.CharField(max_length=32, unique=True, verbose_name='角色名称')
     desc = models.CharField(max_length=128, blank=True, verbose_name='角色说明')
-    menus = models.ManyToManyField(
-        Menu,
-        blank=True,
-        related_name='roles',
-        verbose_name='权限菜单'
-    )
     create_time = models.DateTimeField(auto_now_add=True, verbose_name='创建时间')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='更新时间')
 
     class Meta:
         verbose_name = '角色信息'

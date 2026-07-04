@@ -1,5 +1,9 @@
 <template>
   <section class="home">
+
+    <!-- 子路由出口（必须有，否则动态路由不会显示） -->
+    <router-view />
+
     <el-card class="welcome-card">
       <template #header>
         <div class="card-header">
@@ -14,12 +18,15 @@
         <el-col :xs="24" :sm="12" :md="6">
           <el-statistic title="总任务数" :value="overview.totalTasks" />
         </el-col>
+
         <el-col :xs="24" :sm="12" :md="6">
           <el-statistic title="已完成任务" :value="overview.completedTasks" />
         </el-col>
+
         <el-col :xs="24" :sm="12" :md="6">
           <el-statistic title="设备总数" :value="overview.totalDevices" />
         </el-col>
+
         <el-col :xs="24" :sm="12" :md="6">
           <el-statistic title="在线设备" :value="overview.onlineDevices" />
         </el-col>
@@ -32,7 +39,10 @@
         用于无人机巡检任务、设备状态和巡检数据的统一管理。
       </p>
 
-      <el-button type="primary" @click="goToDashboard">进入仪表盘</el-button>
+      <el-button type="primary" @click="goToDashboard">
+        进入仪表盘
+      </el-button>
+
     </el-card>
   </section>
 </template>
@@ -43,6 +53,7 @@ import { useRouter } from 'vue-router'
 import { getOverview } from '@/api/inspection'
 
 const router = useRouter()
+
 const apiReady = ref(false)
 
 const overview = reactive({
@@ -58,7 +69,7 @@ const loadOverview = async () => {
     const response = await getOverview()
     Object.assign(overview, response.data)
     apiReady.value = true
-  } catch {
+  } catch (e) {
     apiReady.value = false
   }
 }

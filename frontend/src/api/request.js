@@ -22,11 +22,23 @@ instance.interceptors.request.use(
 
 // 响应拦截器 —— 统一错误处理
 instance.interceptors.response.use(
-  response => response.data,
+  response => {
+    const data = response.data
+    // 后端可能返回 HTTP 200 但 body 中 code 为 401（token 失效）
+    if (data && data.code === 401) {
+      localStorage.removeItem('token')
+      localStorage.removeItem('user')
+      localStorage.removeItem('permissions')
+      window.location.href = '/login'
+      return Promise.reject(new Error(data.message || '登录已过期，请重新登录'))
+    }
+    return data
+  },
   error => {
     if (error.response && error.response.status === 401) {
       localStorage.removeItem('token')
       localStorage.removeItem('user')
+      localStorage.removeItem('permissions')
       window.location.href = '/login'
     }
     console.error('API Error:', error)

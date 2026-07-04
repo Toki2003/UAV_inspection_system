@@ -46,6 +46,7 @@ export const mockMenus = [
         icon: 'setting',
         sort: 1,
         is_show: true,
+        perms: ['admin'],   // ⭐ 加这一行（权限控制关键）
         create_time: '2025-01-01 10:00:00'
     },
     {
@@ -55,6 +56,7 @@ export const mockMenus = [
         icon: 'warning',
         sort: 2,
         is_show: true,
+        perms: ['admin', 'user'],   // ⭐ 普通用户也能看
         create_time: '2025-01-01 11:00:00'
     }
 ]

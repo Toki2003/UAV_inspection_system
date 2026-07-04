@@ -6,12 +6,17 @@
         <nav class="nav">
           <router-link to="/">首页</router-link>
           <router-link to="/dashboard">仪表盘</router-link>
-          <router-link to="/drone-control">无人机管控</router-link>
-          <router-link to="/alert">告警管理</router-link>
-          <router-link to="/system">系统管理</router-link>
+          <!-- 动态菜单：从 permissionStore 获取，避免路由未注册时的警告 -->
+          <router-link
+            v-for="item in permissionStore.menus"
+            :key="item.path"
+            :to="item.path"
+          >{{ item.title }}</router-link>
           <router-link to="/about">关于</router-link>
           <span class="nav-divider">|</span>
-          <span class="user-info">{{ store.user?.nickname || '用户' }}</span>
+          <span class="user-info">
+            {{ store.user?.nickname || JSON.parse(localStorage.getItem('user') || '{}')?.nickname || '用户' }}
+          </span>
           <el-button type="danger" size="small" plain @click="handleLogout">退出登录</el-button>
         </nav>
       </div>
@@ -33,15 +38,30 @@ import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import loginApi from './api/login'
 import { useAppStore } from './store'
+import { usePermissionStore } from './store/permission'
+import { resetTokenVerification } from './router'
 
 const router = useRouter()
 const store = useAppStore()
+const permissionStore = usePermissionStore()
 
-const isAuthenticated = computed(() => !!store.token)
+const isAuthenticated = computed(() => {
+  return !!(store.token || localStorage.getItem('token'))
+})
 
 const handleLogout = async () => {
   await loginApi.logout()
+
+  // 1. 清除 app store（token/user/permissions）
   store.clearAuth()
+
+  // 2. 重置 permissionStore（routesAdded/menus）
+  permissionStore.reset()
+
+  // 3. 重置 token 验证状态（下次进入需重新验证）
+  resetTokenVerification()
+
+  // 4. 跳转登录页
   ElMessage.success('已退出登录')
   router.push('/login')
 }

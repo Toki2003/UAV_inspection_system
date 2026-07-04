@@ -1,22 +1,12 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from .models import Menu, Role, SysUser
-
-
-@admin.register(Menu)
-class MenuAdmin(admin.ModelAdmin):
-    """后台菜单管理页面配置"""
-    list_display = ['id', 'title', 'path', 'parent', 'sort', 'is_show']
-    # 列表页可直接修改排序、显示状态
-    list_editable = ['sort', 'is_show']
+from .models import Role, SysUser
 
 
 @admin.register(Role)
 class RoleAdmin(admin.ModelAdmin):
     """后台角色管理页面配置"""
     list_display = ['id', 'name', 'desc']
-    # 多对多菜单使用横向多选框，操作更直观
-    filter_horizontal = ['menus']
 
 
 @admin.register(SysUser)
