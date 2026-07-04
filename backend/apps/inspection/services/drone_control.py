@@ -13,7 +13,23 @@ SUPPORTED_COMMANDS={
 }
 
 _flight_status_store: Dict[str, str] = {}
+_emqx_subscription_store: Dict[str, bool] = {}
 _status_lock = Lock()
+
+_VIDEO_STREAM_MOCK = {
+    "UAV-001": {
+        "airportUrl": "/live/dock01.live.flv",
+        "playbackUrl": "/live/uav001.live.flv",
+    },
+    "UAV-002": {
+        "airportUrl": "/live/dock02.live.flv",
+        "playbackUrl": "/live/uav002.live.flv",
+    },
+    "UAV-003": {
+        "airportUrl": "/live/dock03.live.flv",
+        "playbackUrl": "/live/uav003.live.flv",
+    },
+}
 
 _DOCK_MOCK_DATA = [
     {
@@ -66,13 +82,10 @@ _DOCK_MOCK_DATA = [
     },
 ]
 
-def get_telemetry(device_code:str)->dict:
-    """
-    获取无人机的遥测数据
-    """
-    device=_get_existing_device(device_code)
+def get_telemetry(device_code: str) -> dict:
+    device = _get_existing_device(device_code)
 
-    return{
+    return {
         "deviceCode": device.code,
         "deviceName": device.name,
         "deviceModel": device.model,
@@ -91,78 +104,160 @@ def get_telemetry(device_code:str)->dict:
         "encrypted": True,
     }
 
-def send_command(device_code:str, command:str)->dict:
-    """
-    发送命令给无人机
-    """
-    device=_get_existing_device(device_code)
+def send_command(device_code: str, command: str) -> dict:
+    device = _get_existing_device(device_code)
     _validate_command(command)
     _update_flight_status(device.code, command)
-    return{
+    return {
         "deviceCode": device.code,
         "command": command,
-        "success": True,        
+        "success": True,
         "message": _get_message(command),
         "updateTime": _current_timestamp_ms(),
     }
 
-def get_video(device_code:str)->dict:
-    """
-    获取无人机的视频流信息
-    """
-    device=_get_existing_device(device_code)
-    return{
+def get_video(device_code: str, stream_type: str = "uav") -> dict:
+    device = _get_existing_device(device_code)
+    if stream_type not in {"uav", "airport"}:
+        raise ValueError(f"不支持的视频类型：{stream_type}")
+
+    stream_config = _VIDEO_STREAM_MOCK.get(device.code, {})
+
+    if stream_type == "airport":
+        video_url = stream_config.get("airportUrl", "")
+        stream_name = "机场直播"
+    else:
+        video_url = stream_config.get("playbackUrl", "")
+        stream_name = "无人机直播"
+
+    video_available = bool(
+        device.stream_enabled
+        and device.rtsp_url
+        and video_url
+    )
+
+    return {
         "deviceCode": device.code,
-        "videoUrl": "/live/dock01.live.flv",
-        "videoProtocol": "flv",
-        "videoAvailable": True,
+        "deviceName": device.name,
+        "streamType": stream_type,
+        "streamName": stream_name,
+        "rtspUrl": device.rtsp_url,
+        "videoUrl": video_url,
+        "videoProtocol": "FLV",
+        "videoAvailable": video_available,
+        "mock": True,
     }
 
-def _get_existing_device(device_code:str)->Device:
-    """
-   从Device模型查询设备
-    """
-    device =Device.objects.filter(code=device_code).first()
-    if device is None:
-     raise ValueError(f"设备不存在： {device_code} ")
-    return   device
 
-def _validate_command(command:str)->None:
-    """
-    验证命令是否合法
-    """
+def get_safety_status(device_code: str) -> dict:
+    device = _get_existing_device(device_code)
+    return {
+        "deviceCode": device.code,
+        "complianceStatus": "合规",
+        "inNoFlyZone": False,
+        "encrypted": True,
+        "systemProtection": "正常",
+        "mock": True,
+        "reserved": True,
+        "updateTime": _current_timestamp_ms(),
+    }
+
+
+def get_alert_status(device_code: str) -> dict:
+    device = _get_existing_device(device_code)
+    dock = next(
+        (
+            item
+            for item in _DOCK_MOCK_DATA
+            if item["droneCode"] == device.code
+        ),
+        None,
+    )
+    has_alarm = bool(dock and dock["alarm"])
+    return {
+        "deviceCode": device.code,
+        "activeCount": 1 if has_alarm else 0,
+        "level": "warning" if has_alarm else "normal",
+        "status": "存在告警" if has_alarm else "正常",
+        "message": "机场环境状态异常" if has_alarm else "暂无异常告警",
+        "mock": True,
+        "reserved": True,
+        "updateTime": _current_timestamp_ms(),
+    }
+
+
+def request_takeover(device_code: str) -> dict:
+    device = _get_existing_device(device_code)
+    return {
+        "deviceCode": device.code,
+        "accepted": False,
+        "available": False,
+        "reserved": True,
+        "mock": True,
+        "message": "人工接管接口已预留，等待真实飞控SDK接入",
+        "updateTime": _current_timestamp_ms(),
+    }
+
+
+def get_emqx_status(device_code: str) -> dict:
+    device = _get_existing_device(device_code)
+    requested = _emqx_subscription_store.get(device.code, False)
+    return {
+        "deviceCode": device.code,
+        "connected": False,
+        "brokerConfigured": False,
+        "subscriptionRequested": requested,
+        "subscriptionStatus": "reserved" if requested else "not_requested",
+        "topic": f"uav/{device.code}/telemetry",
+        "mock": True,
+        "reserved": True,
+        "updateTime": _current_timestamp_ms(),
+    }
+
+
+def subscribe_emqx(device_code: str) -> dict:
+    device = _get_existing_device(device_code)
+    with _status_lock:
+        _emqx_subscription_store[device.code] = True
+    result = get_emqx_status(device.code)
+    result["message"] = "EMQX订阅接口已预留，等待Broker配置"
+    return result
+
+
+def _get_existing_device(device_code: str) -> Device:
+    device = Device.objects.filter(code=device_code).first()
+    if device is None:
+        raise ValueError(f"设备不存在：{device_code}")
+    return device
+
+
+def _validate_command(command: str) -> None:
     if not command:
         raise ValueError("控制命令不能为空")
     if command not in SUPPORTED_COMMANDS:
-        raise ValueError(f"不支持的控制命令： {command}")
-    
-def _get_flight_status(device_code:str)->str:   
-    """
-    获取当前无人机状态
-    """ 
+        raise ValueError(f"不支持的控制命令：{command}")
+
+
+def _get_flight_status(device_code: str) -> str:
     with _status_lock:
         return _flight_status_store.get(device_code, "巡检中")
-    
-def _update_flight_status(device_code:str,command:str)->None:
-    """
-    更新无人机状态
-    """
-    command_status_map={
-    "RETURN_HOME": "返航中",
-    "CANCEL_RETURN_HOME": "悬停中",
-    "PAUSE": "已暂停",
-    "RESUME": "巡检中",
-    "START_INSPECTION": "巡检中",
-   }
-    new_status=command_status_map[command]
-    with _status_lock:
-        _flight_status_store[device_code]=new_status
 
-def _get_message(command:str)->str:
-    """
-    获取命令对应的消息
-    """
-    command_message_map={
+
+def _update_flight_status(device_code: str, command: str) -> None:
+    command_status_map = {
+        "RETURN_HOME": "返航中",
+        "CANCEL_RETURN_HOME": "悬停中",
+        "PAUSE": "已暂停",
+        "RESUME": "巡检中",
+        "START_INSPECTION": "巡检中",
+    }
+    new_status = command_status_map[command]
+    with _status_lock:
+        _flight_status_store[device_code] = new_status
+
+
+def _get_message(command: str) -> str:
+    command_message_map = {
         "RETURN_HOME": "返航命令发送成功",
         "CANCEL_RETURN_HOME": "取消返航命令发送成功",
         "PAUSE": "暂停命令发送成功",
@@ -171,17 +266,13 @@ def _get_message(command:str)->str:
     }
     return command_message_map[command]
 
-def _current_timestamp_ms()->int:
-    """
-    获取当前时间戳（毫秒）
-    """
+def _current_timestamp_ms() -> int:
     import time
-    return int(time.time() * 1000)  
+
+    return int(time.time() * 1000)
+
 
 def get_dock_overview() -> dict:
-    """
-    获取机库状态统计
-    """
     total_count = len(_DOCK_MOCK_DATA)
 
     online_count = sum(
@@ -211,9 +302,6 @@ def get_dock_overview() -> dict:
 
 
 def get_dock_list() -> list:
-    """
-    获取机库实时状态列表
-    """
     update_time = int(
         datetime.now().timestamp() * 1000
     )
@@ -225,4 +313,4 @@ def get_dock_list() -> list:
         dock_data["updateTime"] = update_time
         result.append(dock_data)
 
-    return result     
+    return result

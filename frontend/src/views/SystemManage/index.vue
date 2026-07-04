@@ -9,6 +9,10 @@
       </template>
 
       <el-tabs v-model="activeTab" type="border-card">
+        <el-tab-pane label="机场监控" name="airport">
+          <DockMonitor />
+        </el-tab-pane>
+
         <!-- 用户管理 -->
         <el-tab-pane label="账户管理" name="user">
           <UserTable />
@@ -26,10 +30,11 @@
 <script setup>
 import { ref } from 'vue'
 
+import DockMonitor from '@/views/DroneControl/DockMonitor.vue'
 import UserTable from './components/UserTable.vue'
 import RoleTable from './components/RoleTable.vue'
 
-const activeTab = ref('user')
+const activeTab = ref('airport')
 </script>
 
 <style scoped>
