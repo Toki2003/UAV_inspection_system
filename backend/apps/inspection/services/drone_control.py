@@ -1,0 +1,228 @@
+from threading import Lock
+from typing import Dict
+from datetime import datetime
+
+from apps.inspection.models import Device
+
+SUPPORTED_COMMANDS={
+    "RETURN_HOME",
+    "CANCEL_RETURN_HOME",
+    "PAUSE",
+    "RESUME",
+    "START_INSPECTION",
+}
+
+_flight_status_store: Dict[str, str] = {}
+_status_lock = Lock()
+
+_DOCK_MOCK_DATA = [
+    {
+        "dockCode": "DOCK-001",
+        "dockName": "A区智能机库",
+        "location": "轨道交通A区车辆段",
+        "status": "online",
+        "alarm": False,
+        "temperature": 24.6,
+        "humidity": 48.2,
+        "windSpeed": 2.3,
+        "coverStatus": "closed",
+        "droneInDock": True,
+        "droneCode": "UAV-001",
+        "battery": 88,
+        "storageUsage": 42,
+        "taskCount": 3,
+    },
+    {
+        "dockCode": "DOCK-002",
+        "dockName": "B区智能机库",
+        "location": "轨道交通B区停车场",
+        "status": "online",
+        "alarm": True,
+        "temperature": 31.8,
+        "humidity": 65.4,
+        "windSpeed": 5.6,
+        "coverStatus": "open",
+        "droneInDock": False,
+        "droneCode": "UAV-002",
+        "battery": 76,
+        "storageUsage": 68,
+        "taskCount": 2,
+    },
+    {
+        "dockCode": "DOCK-003",
+        "dockName": "维修区机库",
+        "location": "轨道交通维修库",
+        "status": "offline",
+        "alarm": False,
+        "temperature": 0.0,
+        "humidity": 0.0,
+        "windSpeed": 0.0,
+        "coverStatus": "unknown",
+        "droneInDock": True,
+        "droneCode": "UAV-003",
+        "battery": 42,
+        "storageUsage": 35,
+        "taskCount": 0,
+    },
+]
+
+def get_telemetry(device_code:str)->dict:
+    """
+    获取无人机的遥测数据
+    """
+    device=_get_existing_device(device_code)
+
+    return{
+        "deviceCode": device.code,
+        "deviceName": device.name,
+        "deviceModel": device.model,
+        "online": device.status == "online",
+        "battery": device.battery_level,
+        "height": 35.6,
+        "speed": 4.2,
+        "longitude": 118.796877,
+        "latitude": 32.060255,
+        "location": device.location,
+        "flightStatus": _get_flight_status(device.code),
+        "alarmStatus": "正常",
+        "updateTime": _current_timestamp_ms(),
+        "complianceStatus": "合规",
+        "inNoFlyZone": False,
+        "encrypted": True,
+    }
+
+def send_command(device_code:str, command:str)->dict:
+    """
+    发送命令给无人机
+    """
+    device=_get_existing_device(device_code)
+    _validate_command(command)
+    _update_flight_status(device.code, command)
+    return{
+        "deviceCode": device.code,
+        "command": command,
+        "success": True,        
+        "message": _get_message(command),
+        "updateTime": _current_timestamp_ms(),
+    }
+
+def get_video(device_code:str)->dict:
+    """
+    获取无人机的视频流信息
+    """
+    device=_get_existing_device(device_code)
+    return{
+        "deviceCode": device.code,
+        "videoUrl": "/live/dock01.live.flv",
+        "videoProtocol": "flv",
+        "videoAvailable": True,
+    }
+
+def _get_existing_device(device_code:str)->Device:
+    """
+   从Device模型查询设备
+    """
+    device =Device.objects.filter(code=device_code).first()
+    if device is None:
+     raise ValueError(f"设备不存在： {device_code} ")
+    return   device
+
+def _validate_command(command:str)->None:
+    """
+    验证命令是否合法
+    """
+    if not command:
+        raise ValueError("控制命令不能为空")
+    if command not in SUPPORTED_COMMANDS:
+        raise ValueError(f"不支持的控制命令： {command}")
+    
+def _get_flight_status(device_code:str)->str:   
+    """
+    获取当前无人机状态
+    """ 
+    with _status_lock:
+        return _flight_status_store.get(device_code, "巡检中")
+    
+def _update_flight_status(device_code:str,command:str)->None:
+    """
+    更新无人机状态
+    """
+    command_status_map={
+    "RETURN_HOME": "返航中",
+    "CANCEL_RETURN_HOME": "悬停中",
+    "PAUSE": "已暂停",
+    "RESUME": "巡检中",
+    "START_INSPECTION": "巡检中",
+   }
+    new_status=command_status_map[command]
+    with _status_lock:
+        _flight_status_store[device_code]=new_status
+
+def _get_message(command:str)->str:
+    """
+    获取命令对应的消息
+    """
+    command_message_map={
+        "RETURN_HOME": "返航命令发送成功",
+        "CANCEL_RETURN_HOME": "取消返航命令发送成功",
+        "PAUSE": "暂停命令发送成功",
+        "RESUME": "恢复命令发送成功",
+        "START_INSPECTION": "开始巡检命令发送成功",
+    }
+    return command_message_map[command]
+
+def _current_timestamp_ms()->int:
+    """
+    获取当前时间戳（毫秒）
+    """
+    import time
+    return int(time.time() * 1000)  
+
+def get_dock_overview() -> dict:
+    """
+    获取机库状态统计
+    """
+    total_count = len(_DOCK_MOCK_DATA)
+
+    online_count = sum(
+        1
+        for dock in _DOCK_MOCK_DATA
+        if dock["status"] == "online"
+    )
+
+    offline_count = sum(
+        1
+        for dock in _DOCK_MOCK_DATA
+        if dock["status"] == "offline"
+    )
+
+    alarm_count = sum(
+        1
+        for dock in _DOCK_MOCK_DATA
+        if dock["alarm"]
+    )
+
+    return {
+        "totalCount": total_count,
+        "onlineCount": online_count,
+        "offlineCount": offline_count,
+        "alarmCount": alarm_count,
+    }
+
+
+def get_dock_list() -> list:
+    """
+    获取机库实时状态列表
+    """
+    update_time = int(
+        datetime.now().timestamp() * 1000
+    )
+
+    result = []
+
+    for dock in _DOCK_MOCK_DATA:
+        dock_data = dock.copy()
+        dock_data["updateTime"] = update_time
+        result.append(dock_data)
+
+    return result     

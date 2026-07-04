@@ -15,33 +15,8 @@ from .serializers import (
     DeviceSerializer,
     InspectionTaskSerializer,
     AlertSerializer,
+    DroneCommandSerializer,
 )
-
-
-# Mock 用户数据，接入真实数据库后替换为 User 模型查询
-MOCK_USERS = {
-    "admin": {
-        "id": 1,
-        "username": "admin",
-        "password": "admin123",
-        "nickname": "系统管理员",
-        "email": "admin@uav.com",
-        "phone": "13800000000",
-        "role": "admin",
-    },
-    "user": {
-        "id": 2,
-        "username": "user",
-        "password": "user123",
-        "nickname": "普通用户",
-        "email": "user@uav.com",
-        "phone": "13800000001",
-        "role": "user",
-    },
-}
-
-# token -> 用户信息映射（mock，生产环境用 JWT）
-_TOKEN_STORE = {}
 
 
 @api_view(["GET"])
@@ -413,3 +388,88 @@ def _get_token(request):
     if auth.startswith("Bearer "):
         return auth[7:]
     return auth
+
+#--无人机实时管控——————————————————————————————————————————————————
+@api_view(["GET"])
+def drone_telemetry(request,device_code):
+    try:
+        telemetry = get_telemetry(device_code)
+        return success("获取无人机遥测数据成功", telemetry,)
+    except ValueError as exc:
+        return fail(str(exc))
+    except Exception as exc:
+        return fail(f"获取无人机遥测数据失败: {str(exc)}")
+    
+
+@api_view(["GET"])
+def drone_video(request, device_code):
+    try:
+        video = get_video(device_code)
+
+        return success(
+            "获取无人机视频流信息成功",
+            video,
+        )
+    except ValueError as exc:
+        return fail(str(exc))
+    except Exception as exc:
+        return fail(
+            f"获取无人机视频流信息失败：{exc}"
+        )    
+
+
+@api_view(["POST"])
+def drone_command(request, device_code):
+    serializer = DroneCommandSerializer(
+        data=request.data
+    )
+
+    if not serializer.is_valid():
+        return fail(
+            "控制命令参数错误",
+            data=serializer.errors,
+        )
+
+    command = serializer.validated_data["command"]
+
+    try:
+        result = send_command(
+            device_code,
+            command,
+        )
+
+        return success(
+            "无人机控制命令发送成功",
+            result,
+        )
+    except ValueError as exc:
+        return fail(str(exc))
+    except Exception as exc:
+        return fail(
+            f"发送无人机控制命令失败：{exc}"
+        )
+
+@api_view(["GET"])
+def dock_overview(request):
+    try:
+        overview = get_dock_overview()
+
+        return success(
+            "获取机库统计成功",
+            overview,
+        )
+    except Exception:
+        return fail("获取机库统计失败")
+
+
+@api_view(["GET"])
+def dock_list(request):
+    try:
+        docks = get_dock_list()
+
+        return success(
+            "获取机库列表成功",
+            docks,
+        )
+    except Exception:
+        return fail("获取机库列表失败")    

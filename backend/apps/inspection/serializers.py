@@ -59,3 +59,19 @@ class AlertSerializer(serializers.ModelSerializer):
         model = Alert
         fields = '__all__'
         read_only_fields = ['id', 'alert_time']
+
+class DroneCommandSerializer(serializers.Serializer):
+   COMMAND_CHOICES=[
+    ("RETURN_HOME", "返航"),
+        ("CANCEL_RETURN_HOME", "取消返航"),
+        ("PAUSE", "暂停"),
+        ("RESUME", "恢复"),
+        ("START_INSPECTION", "开始检测"),
+    ]   
+   command=serializers.ChoiceField(
+       choices=COMMAND_CHOICES, 
+        required=True, 
+        error_messages={
+            "required": "命令不能为空", 
+            "invalid_choice": "无效的命令"},
+)    

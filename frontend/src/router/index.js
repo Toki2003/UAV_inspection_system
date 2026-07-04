@@ -10,6 +10,16 @@ const routes = [
     meta: { public: true }
   },
   {
+  path: '/drone-control',
+  name: 'DroneControl',
+  component: () =>
+    import('@/views/DroneControl/index.vue'),
+  meta: {
+    title: '无人机管控',
+    requiresAuth: true
+  }
+},
+  {
     path: '/',
     name: 'Home',
     component: Home,
