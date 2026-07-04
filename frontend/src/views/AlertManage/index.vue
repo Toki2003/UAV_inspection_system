@@ -65,11 +65,17 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="240" fixed="right">
+        <el-table-column label="操作" width="260" fixed="right" align="center">
           <template #default="{ row }">
-            <el-button type="text" size="small" @click="handleView(row)">查看</el-button>
-            <el-button type="text" size="small" @click="handleEdit(row)">更新</el-button>
-            <el-button type="text" size="small" style="color: #f56c6c" @click="handleDelete(row)">删除</el-button>
+            <el-button size="small" type="info" plain @click="handleView(row)">
+              <el-icon><View /></el-icon> 查看
+            </el-button>
+            <el-button size="small" type="primary" plain @click="handleEdit(row)">
+              <el-icon><Edit /></el-icon> 修改
+            </el-button>
+            <el-button size="small" type="danger" plain @click="handleDelete(row)">
+              <el-icon><Delete /></el-icon> 删除
+            </el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -95,12 +101,12 @@
       width="600px"
       :close-on-click-modal="false"
     >
-      <el-form :model="formData" label-width="100px" ref="formRef" :rules="formRules">
+      <el-form :model="formData" label-width="100px" ref="formRef" :rules="isEdit ? formRules : {}">
         <el-form-item label="航线名称" prop="route_name">
-          <el-input v-model="formData.route_name" placeholder="请输入航线名称" />
+          <el-input v-model="formData.route_name" placeholder="请输入航线名称" :disabled="!isEdit" />
         </el-form-item>
         <el-form-item label="检测类型" prop="detect_type">
-          <el-select v-model="formData.detect_type" placeholder="请选择">
+          <el-select v-model="formData.detect_type" placeholder="请选择" :disabled="!isEdit">
             <el-option label="障碍物" value="obstacle" />
             <el-option label="缺陷" value="defect" />
             <el-option label="异常行为" value="anomaly" />
@@ -108,13 +114,13 @@
           </el-select>
         </el-form-item>
         <el-form-item label="告警描述" prop="description">
-          <el-input v-model="formData.description" type="textarea" :rows="3" placeholder="请输入详细描述" />
+          <el-input v-model="formData.description" type="textarea" :rows="3" placeholder="请输入详细描述" :disabled="!isEdit" />
         </el-form-item>
         <el-form-item label="位置信息" prop="location">
-          <el-input v-model="formData.location" placeholder="请输入位置" />
+          <el-input v-model="formData.location" placeholder="请输入位置" :disabled="!isEdit" />
         </el-form-item>
         <el-form-item label="处理状态" prop="status">
-          <el-select v-model="formData.status" placeholder="请选择">
+          <el-select v-model="formData.status" placeholder="请选择" :disabled="!isEdit">
             <el-option label="待处理" value="pending" />
             <el-option label="处理中" value="processing" />
             <el-option label="已解决" value="resolved" />
@@ -122,12 +128,12 @@
           </el-select>
         </el-form-item>
         <el-form-item label="备注" prop="remark">
-          <el-input v-model="formData.remark" placeholder="备注信息（可选）" />
+          <el-input v-model="formData.remark" placeholder="备注信息（可选）" :disabled="!isEdit" />
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="submitForm">确定</el-button>
+        <el-button @click="dialogVisible = false">{{ isEdit ? '取消' : '关闭' }}</el-button>
+        <el-button v-if="isEdit" type="primary" @click="submitForm">确定</el-button>
       </template>
     </el-dialog>
   </div>
@@ -136,6 +142,7 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { View, Edit, Delete } from '@element-plus/icons-vue'
 import {
   getAlertList,
   createAlert,
@@ -249,12 +256,10 @@ const handleCreate = () => {
 
 
 const handleView = (row) => {
-  isEdit.value = false 
+  isEdit.value = false
   dialogTitle.value = '查看告警详情'
-  
   Object.assign(formData, { ...row })
-  
-  ElMessage.info(`告警详情：${row.description}，位置：${row.location}`)
+  dialogVisible.value = true
 }
 
 

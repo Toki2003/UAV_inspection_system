@@ -7,12 +7,20 @@ router.register(r'alert', views.AlertViewSet, basename='alert')
 
 urlpatterns = [
     path("overview/", views.overview),
+    # 设备管理
     path("device/list", views.device_list_create),
     path("device/create", views.device_create),
     path("device/online", views.online_devices),
     path("device/online/count", views.online_device_count),
     path("device/code/<str:code>", views.device_by_code),
     path("device/<int:pk>", views.device_detail),
+    # 设备视频流（预留接口）
+    path("stream/config", views.stream_config),
+    path("stream/device/<int:device_id>", views.device_stream),
+    # 设备遥测数据（预留接口，mock 数据）
+    path("telemetry/device/<int:device_id>", views.device_telemetry),
+    path("telemetry/device/<int:device_id>/history", views.device_telemetry_history),
+    # 巡检任务
     path("inspection/list", views.inspection_list_create),
     path("inspection/create", views.inspection_create),
     path("inspection/device/<int:device_id>", views.inspection_by_device),

@@ -50,19 +50,26 @@ function mockLogin(username, password) {
 
 // ── 正式 API ─────────────────────────────────────────────
 export async function login(username, password) {
+  let res
   try {
-    const res = await request({
+    res = await request({
       url: '/auth/login',
       method: 'post',
       data: { username, password }
     })
-    return res.data          // { token, user }
   } catch (err) {
-    // 后端不可用（未启动、500、404 等任何情况）→ 降级到 mock
+    // 后端不可用（未启动、网络错误等）→ 降级到 mock
     console.warn('[login] 后端接口异常，降级使用 mock 数据', err?.message)
-    const res = await mockLogin(username, password)
-    return res.data
+    const mockRes = await mockLogin(username, password)
+    return mockRes.data
   }
+
+  // 后端返回了响应，检查业务状态码
+  // fail() 返回 HTTP 200 但 code!=200，需手动判断
+  if (res.code !== 200) {
+    throw new Error(res.message || '登录失败')
+  }
+  return res.data   // { token, user }
 }
 
 export async function logout() {

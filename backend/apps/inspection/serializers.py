@@ -18,6 +18,8 @@ class DeviceSerializer(serializers.ModelSerializer):
             "battery_level",
             "location",
             "last_online_at",
+            "rtsp_url",
+            "stream_enabled",
             "created_at",
             "updated_at",
         ]

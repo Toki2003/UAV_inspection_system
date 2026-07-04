@@ -16,16 +16,16 @@ ALLOWED_HOSTS = [
 ]
 
 INSTALLED_APPS = [
-    "django.contrib.admin",
-    "django.contrib.auth",
-    "django.contrib.contenttypes",
-    "django.contrib.sessions",
-    "django.contrib.messages",
-    "django.contrib.staticfiles",
-    "corsheaders",
-    "rest_framework",
-    'django_filters',
-    "apps.inspection.apps.InspectionConfig",
+    'django.contrib.admin',
+    'django.contrib.auth',
+    'django.contrib.contenttypes',
+    'django.contrib.sessions',
+    'django.contrib.messages',
+    'django.contrib.staticfiles',
+    'corsheaders',
+    'rest_framework',
+    'apps.inspection',
+    'apps.system',
 ]
 
 MIDDLEWARE = [
@@ -105,3 +105,10 @@ REST_FRAMEWORK = {
         "rest_framework.parsers.MultiPartParser",
     ],
 }
+# 替换系统默认用户模型，使用自定义SysUser
+AUTH_USER_MODEL = "system.SysUser"
+
+# ── RTSP 视频流配置 ──────────────────────────────────────────────
+RTSP_ENABLED = os.getenv("RTSP_ENABLED", "False").lower() == "true"
+RTSP_DEFAULT_PORT = int(os.getenv("RTSP_DEFAULT_PORT", "554"))
+RTSP_MEDIA_SERVER = os.getenv("RTSP_MEDIA_SERVER", "http://localhost:8888")

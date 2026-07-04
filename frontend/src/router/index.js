@@ -28,6 +28,12 @@ const routes = [
     meta: { title: '告警管理', requiresAuth: true }
   },
   {
+    path: '/system',
+    name: 'SystemManage',
+    component: () => import('@/views/SystemManage/index.vue'),
+    meta: { title: '系统管理', requiresAuth: true }
+  },
+  {
     path: '/about',
     name: 'About',
     component: () => import('../views/About.vue'),

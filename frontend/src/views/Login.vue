@@ -96,27 +96,29 @@ const rules = {
 const handleLogin = async () => {
   if (!formRef.value) return
 
-  await formRef.value.validate(async (valid) => {
-    if (!valid) return
+  try {
+    await formRef.value.validate()
+  } catch {
+    return
+  }
 
-    loading.value = true
-    try {
-      const data = await loginApi.login(form.username, form.password)
+  loading.value = true
+  try {
+    const data = await loginApi.login(form.username, form.password)
 
-      // 保存到 store 和 localStorage
-      store.setToken(data.token)
-      store.setUser(data.user)
-      localStorage.setItem('token', data.token)
-      localStorage.setItem('user', JSON.stringify(data.user))
+    // 保存到 store 和 localStorage
+    store.setToken(data.token)
+    store.setUser(data.user)
+    localStorage.setItem('token', data.token)
+    localStorage.setItem('user', JSON.stringify(data.user))
 
-      ElMessage.success('登录成功')
-      router.push('/')
-    } catch (err) {
-      ElMessage.error(err.message || '登录失败，请检查用户名和密码')
-    } finally {
-      loading.value = false
-    }
-  })
+    ElMessage.success('登录成功')
+    router.push('/')
+  } catch (err) {
+    ElMessage.error(err.message || '登录失败，请检查用户名和密码')
+  } finally {
+    loading.value = false
+  }
 }
 </script>
 

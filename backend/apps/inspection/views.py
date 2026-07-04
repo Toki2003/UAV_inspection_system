@@ -1,10 +1,47 @@
+import hashlib
+import random
+import time
+
+from django.conf import settings
 from django.db.models import Count, Q
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import viewsets, filters
 from rest_framework.decorators import api_view
 from rest_framework.generics import get_object_or_404
 
-from .models import Device, InspectionTask
+from .models import Device, InspectionTask, Alert
 from .responses import fail, success
-from .serializers import DeviceSerializer, InspectionTaskSerializer
+from .serializers import (
+    DeviceSerializer,
+    InspectionTaskSerializer,
+    AlertSerializer,
+)
+
+
+# Mock 用户数据，接入真实数据库后替换为 User 模型查询
+MOCK_USERS = {
+    "admin": {
+        "id": 1,
+        "username": "admin",
+        "password": "admin123",
+        "nickname": "系统管理员",
+        "email": "admin@uav.com",
+        "phone": "13800000000",
+        "role": "admin",
+    },
+    "user": {
+        "id": 2,
+        "username": "user",
+        "password": "user123",
+        "nickname": "普通用户",
+        "email": "user@uav.com",
+        "phone": "13800000001",
+        "role": "user",
+    },
+}
+
+# token -> 用户信息映射（mock，生产环境用 JWT）
+_TOKEN_STORE = {}
 
 
 @api_view(["GET"])
@@ -137,37 +174,8 @@ def inspection_by_status(request, status):
     return success("获取任务成功", InspectionTaskSerializer(queryset, many=True).data)
 
 
-# ── 登录认证（预留接口，当前使用 mock 数据） ──────────────────────
-
-import hashlib
-import time
-
-# Mock 用户数据 —— 以后接入真实数据库时替换为 User 模型查询
-MOCK_USERS = {
-    "admin": {
-        "id": 1,
-        "username": "admin",
-        "password": "admin123",
-        "nickname": "系统管理员",
-        "email": "admin@uav.com",
-        "phone": "13800000000",
-        "role": "admin",
-    },
-    "user": {
-        "id": 2,
-        "username": "user",
-        "password": "user123",
-        "nickname": "普通用户",
-        "email": "user@uav.com",
-        "phone": "13800000001",
-        "role": "user",
-    },
-}
-
-
 @api_view(["POST"])
 def login(request):
-    """用户登录 —— POST /api/auth/login"""
     username = (request.data.get("username") or "").strip()
     password = (request.data.get("password") or "").strip()
 
@@ -180,14 +188,11 @@ def login(request):
     if not user or user["password"] != password:
         return fail("用户名或密码错误")
 
-    # 生成简单 token（生产环境应使用 JWT）
     token = "tk_" + hashlib.md5(
         f"{user['id']}_{username}_{time.time()}".encode()
     ).hexdigest()
 
     user_info = {k: v for k, v in user.items() if k != "password"}
-
-    # 记录 token → 用户映射（mock，生产环境用 JWT 解析）
     _TOKEN_STORE[token] = user_info
 
     return success("登录成功", {"token": token, "user": user_info})
@@ -195,7 +200,6 @@ def login(request):
 
 @api_view(["POST"])
 def logout(request):
-    """用户登出 —— POST /api/auth/logout"""
     token = _get_token(request)
     if token:
         _TOKEN_STORE.pop(token, None)
@@ -204,7 +208,6 @@ def logout(request):
 
 @api_view(["GET"])
 def userinfo(request):
-    """获取当前登录用户信息 —— GET /api/auth/userinfo"""
     token = _get_token(request)
     user_info = _TOKEN_STORE.get(token)
     if not user_info:
@@ -212,11 +215,8 @@ def userinfo(request):
     return success("获取用户信息成功", user_info)
 
 
-# ── 用户管理 CRUD（预留接口，当前使用 mock 数据） ──────────────────
-
 @api_view(["GET"])
 def user_list(request):
-    """用户列表 —— GET /api/user/list"""
     users = [
         {k: v for k, v in u.items() if k != "password"}
         for u in MOCK_USERS.values()
@@ -226,7 +226,6 @@ def user_list(request):
 
 @api_view(["POST"])
 def user_create(request):
-    """创建用户 —— POST /api/user/create"""
     username = (request.data.get("username") or "").strip()
     if not username:
         return fail("用户名不能为空")
@@ -249,7 +248,6 @@ def user_create(request):
 
 @api_view(["PUT"])
 def user_update(request, pk):
-    """编辑用户 —— PUT /api/user/<pk>"""
     for uname, u in MOCK_USERS.items():
         if u["id"] == pk:
             for field in ("nickname", "email", "phone", "role"):
@@ -264,7 +262,6 @@ def user_update(request, pk):
 
 @api_view(["DELETE"])
 def user_delete(request, pk):
-    """删除用户 —— DELETE /api/user/<pk>"""
     for uname, u in list(MOCK_USERS.items()):
         if u["id"] == pk:
             del MOCK_USERS[uname]
@@ -272,16 +269,7 @@ def user_delete(request, pk):
     return fail("用户不存在")
 
 
-# ── 告警管理（DRF ViewSet） ──────────────────────────────────────
-
-from rest_framework import viewsets, filters
-from django_filters.rest_framework import DjangoFilterBackend
-from .models import Alert
-from .serializers import AlertSerializer
-
-
 class AlertViewSet(viewsets.ModelViewSet):
-    """告警管理视图"""
     queryset = Alert.objects.all().order_by('-alert_time')
     serializer_class = AlertSerializer
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
@@ -291,14 +279,136 @@ class AlertViewSet(viewsets.ModelViewSet):
     ordering = ['-alert_time']
 
 
-# ── 内部工具函数 ──────────────────────────────────────────────────
+# ── 视频流接口（预留，接入真实 RTSP 流时实现） ────────────────────────
 
-# token → 用户信息映射（mock，生产环境用 JWT）
-_TOKEN_STORE = {}
+@api_view(["GET"])
+def stream_config(request):
+    """
+    获取视频流全局配置
+
+    预留接口，接入真实流媒体服务器后返回实际配置。
+    """
+    return success("获取视频流配置成功", {
+        "enabled": settings.RTSP_ENABLED,
+        "mediaServer": settings.RTSP_MEDIA_SERVER,
+        "defaultPort": settings.RTSP_DEFAULT_PORT,
+        "protocol": "rtsp",
+    })
+
+
+@api_view(["GET"])
+def device_stream(request, device_id):
+    """
+    获取指定设备的视频流信息
+
+    预留接口，接入真实设备后返回实际 RTSP 地址或流媒体代理地址。
+    当前返回 mock 数据供前端调试。
+    """
+    device = get_object_or_404(Device, pk=device_id)
+
+    if not settings.RTSP_ENABLED:
+        return success("视频流功能未启用", {
+            "deviceId": device.id,
+            "deviceCode": device.code,
+            "streamAvailable": False,
+            "message": "视频流功能未启用，请在 .env 中设置 RTSP_ENABLED=True",
+        })
+
+    # mock 数据：接入真实设备后替换为实际流地址
+    mock_stream_url = device.rtsp_url or f"rtsp://mock-device-{device.id}:554/stream1"
+    mock_hls_url = f"{settings.RTSP_MEDIA_SERVER}/live/{device.code}.m3u8"
+
+    return success("获取设备视频流成功", {
+        "deviceId": device.id,
+        "deviceCode": device.code,
+        "streamAvailable": device.stream_enabled,
+        "rtspUrl": mock_stream_url,
+        "hlsUrl": mock_hls_url,
+        "status": "online" if device.status == "online" else "offline",
+    })
+
+
+# ── 设备遥测数据接口（预留，接入真实设备时实现） ──────────────────────
+
+@api_view(["GET"])
+def device_telemetry(request, device_id):
+    """
+    获取设备实时遥测数据
+
+    预留接口，接入真实设备后返回实际传感器数据。
+    当前返回 mock 数据供前端调试。
+    """
+    device = get_object_or_404(Device, pk=device_id)
+
+    # mock 遥测数据：接入真实设备后替换为实际数据源
+    mock_telemetry = {
+        "deviceId": device.id,
+        "deviceCode": device.code,
+        "timestamp": int(time.time() * 1000),
+        "gps": {
+            "latitude": 23.1291 + random.uniform(-0.001, 0.001),
+            "longitude": 113.2644 + random.uniform(-0.001, 0.001),
+            "altitude": 50 + random.uniform(-5, 20),
+        },
+        "battery": {
+            "level": device.battery_level,
+            "voltage": round(3.7 + device.battery_level * 0.005, 2),
+            "charging": False,
+        },
+        "flight": {
+            "speed": round(random.uniform(0, 15), 1),
+            "heading": round(random.uniform(0, 360), 1),
+            "verticalSpeed": round(random.uniform(-2, 3), 1),
+        },
+        "signal": {
+            "gps": random.randint(8, 14),
+            "rc": random.randint(-80, -40),
+            "video": random.randint(-70, -30),
+        },
+        "environment": {
+            "windSpeed": round(random.uniform(0, 8), 1),
+            "temperature": round(random.uniform(15, 35), 1),
+            "humidity": random.randint(40, 80),
+        },
+    }
+
+    return success("获取设备遥测数据成功", mock_telemetry)
+
+
+@api_view(["GET"])
+def device_telemetry_history(request, device_id):
+    """
+    获取设备历史遥测数据
+
+    预留接口，接入真实设备后从数据库/时序数据库查询。
+    当前返回 mock 数据供前端调试。
+    """
+    device = get_object_or_404(Device, pk=device_id)
+
+    # mock 历史数据：生成最近 10 条记录
+    now = int(time.time() * 1000)
+    mock_history = [
+        {
+            "timestamp": now - i * 5000,
+            "gps": {
+                "latitude": 23.1291 + random.uniform(-0.002, 0.002),
+                "longitude": 113.2644 + random.uniform(-0.002, 0.002),
+                "altitude": 50 + random.uniform(-5, 30),
+            },
+            "battery": device.battery_level - i,
+            "speed": round(random.uniform(0, 15), 1),
+        }
+        for i in range(10)
+    ]
+
+    return success("获取历史遥测数据成功", {
+        "deviceId": device.id,
+        "deviceCode": device.code,
+        "records": mock_history,
+    })
 
 
 def _get_token(request):
-    """从 Authorization 请求头中提取 token"""
     auth = request.META.get("HTTP_AUTHORIZATION", "")
     if auth.startswith("Bearer "):
         return auth[7:]
