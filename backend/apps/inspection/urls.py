@@ -44,4 +44,9 @@ urlpatterns = [
     path("drone-control/<str:device_code>/telemetry",views.drone_telemetry),
     path("drone-control/<str:device_code>/video",views.drone_video),
     path("drone-control/<str:device_code>/command",views.drone_command),
+    path("drone-control/<str:device_code>/safety",views.drone_safety),
+    path("drone-control/<str:device_code>/alerts/status",views.drone_alert_status),
+    path("drone-control/<str:device_code>/takeover",views.drone_takeover),
+    path("drone-control/<str:device_code>/emqx/status",views.drone_emqx_status),
+    path("drone-control/<str:device_code>/emqx/subscribe",views.drone_emqx_subscribe),
 ]

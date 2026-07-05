@@ -10,10 +10,15 @@
         style="width: 220px"
         @keyup.enter="loadRoles"
         @clear="loadRoles"
-      />
+      >
+        <template #prefix>
+          <el-icon><Search /></el-icon>
+        </template>
+      </el-input>
 
-      <el-button type="primary" @click="loadRoles">刷新</el-button>
+      <el-button type="primary" @click="loadRoles">查询</el-button>
 
+      <!-- 新增角色：拥有 role:create 权限即可操作 -->
       <el-button v-permission="'role:create'" type="success" @click="openDialog()">新增角色</el-button>
     </div>
 
@@ -25,7 +30,7 @@
       <el-table-column label="操作" width="220">
         <template #default="{ row }">
 
-          <!-- 编辑：需要 role:update 权限 -->
+          <!-- 编辑：拥有 role:update 权限即可操作 -->
           <el-button
             v-permission="'role:update'"
             type="primary"
@@ -35,8 +40,9 @@
             编辑
           </el-button>
 
-          <!-- 删除：需要 role:delete 权限 -->
+          <!-- 删除：基础角色不可删除，拥有 role:delete 权限即可操作 -->
           <el-button
+            v-if="!isBaseRole(row)"
             v-permission="'role:delete'"
             type="danger"
             size="small"
@@ -59,8 +65,20 @@
 </template>
 
 <script setup>
+/**
+ * RoleTable - 角色列表管理组件
+ *
+ * 职责：展示角色列表、搜索过滤、创建 / 编辑 / 删除角色。
+ * 权限控制：
+ *   - 新增按钮受 role:create 权限控制（v-permission 指令）
+ *   - 编辑按钮受 role:update 权限控制
+ *   - 删除按钮受 role:delete 权限控制，且基础角色不可删除
+ *   - 删除 / 编辑角色后从后端刷新当前用户权限，确保前后端一致
+ */
 import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { Search } from '@element-plus/icons-vue'
+import { useAppStore } from '@/store'
 
 import RoleDialog from './RoleDialog.vue'
 
@@ -69,15 +87,21 @@ import {
   deleteRole
 } from '@/api/system'
 
-// ================= 数据 =================
+const store = useAppStore()
 const list = ref([])
 const loading = ref(false)
 const search = ref('')
-
-// 弹窗引用
 const dialogRef = ref(null)
 
-// ================= 加载角色 =================
+/** 系统基础角色名称，这些角色不可删除 */
+const BASE_ROLE_NAMES = ['super_admin', 'admin', 'user']
+
+/** 判断角色是否为基础角色（不可删除） */
+const isBaseRole = (row) => BASE_ROLE_NAMES.includes(row?.name)
+
+
+
+/** 加载角色列表，支持前端本地搜索过滤 */
 const loadRoles = async () => {
   loading.value = true
   try {
@@ -108,7 +132,10 @@ const loadRoles = async () => {
 
 onMounted(loadRoles)
 
-// ================= 打开弹窗（统一入口） =================
+/**
+ * 打开角色编辑弹窗
+ * @param {Object|null} row - 编辑时传入角色数据，新建时传 null
+ */
 const openDialog = (row = null) => {
   dialogRef.value.open(
     row || {
@@ -119,7 +146,7 @@ const openDialog = (row = null) => {
   )
 }
 
-// ================= 删除 =================
+/** 删除角色，删除后从后端刷新当前用户权限 */
 const handleDelete = async (row) => {
   await ElMessageBox.confirm(
     '确认删除该角色？',
@@ -130,6 +157,10 @@ const handleDelete = async (row) => {
   try {
     await deleteRole(row.id)
     ElMessage.success('删除成功')
+    
+    // 角色删除可能影响关联用户的权限状态，从后端刷新当前用户权限
+    await store.refreshPermissionsFromBackend()
+    
     loadRoles()
   } catch (err) {
     ElMessage.error(err.response?.data?.message || '删除失败')
