@@ -61,7 +61,10 @@ const instance = axios.create({
   }
 })
 
-// 请求拦截器 —— 自动附带 token + 权限校验
+/**
+ * 请求拦截器
+ * 自动附带 Authorization Token，并对写操作进行前端权限预校验
+ */
 instance.interceptors.request.use(
   config => {
     const token = localStorage.getItem('token')
@@ -84,7 +87,10 @@ instance.interceptors.request.use(
   error => Promise.reject(error)
 )
 
-// 响应拦截器 —— 统一错误处理
+/**
+ * 响应拦截器
+ * 统一处理后端响应，拦截 401 状态并清除本地登录态
+ */
 instance.interceptors.response.use(
   response => {
     const data = response.data

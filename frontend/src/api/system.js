@@ -1,11 +1,11 @@
 /**
  * 系统管理 API
  *
- * 统一调用后端 /api/system/ 接口。
+ * 统一调用后端 /api/system/ 接口，包含用户管理与角色管理。
  */
 import request from './request'
 
-// ── 用户管理 ─────────────────────────────────────────────
+/* ===================== 用户管理 ===================== */
 
 /** 获取用户列表 */
 export const getUserList = (params = {}) => {
@@ -32,7 +32,7 @@ export const deleteUser = (id) => {
   return request.delete(`/system/users/${id}/`)
 }
 
-// ── 角色管理 ─────────────────────────────────────────────
+/* ===================== 角色管理 ===================== */
 
 /** 获取角色列表 */
 export const getRoleList = () => {
@@ -59,7 +59,7 @@ export const getPermissionTree = () => {
   return request.get('/system/roles/permission_tree/')
 }
 
-// ── 默认导出 ─────────────────────────────────────────────
+/* ===================== 默认导出 ===================== */
 
 export default {
   getUserList,
