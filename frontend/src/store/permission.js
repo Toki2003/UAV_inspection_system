@@ -1,6 +1,21 @@
 import { defineStore } from 'pinia'
 import { dynamicRoutes } from '@/router/dynamicRoutes'
 import router from '@/router'
+import { expandPermissions } from '@/utils/permission'
+
+// 权限变更事件总线
+const permissionEventTarget = new EventTarget()
+
+export function onPermissionChange(callback) {
+  permissionEventTarget.addEventListener('permission-change', callback)
+  return () => {
+    permissionEventTarget.removeEventListener('permission-change', callback)
+  }
+}
+
+export function triggerPermissionChange() {
+  permissionEventTarget.dispatchEvent(new CustomEvent('permission-change'))
+}
 
 export const usePermissionStore = defineStore('permission', {
     state: () => ({
@@ -47,14 +62,21 @@ export const usePermissionStore = defineStore('permission', {
          * 过滤路由
          */
         filterRoutes(routes, role, permissions) {
+            // 扩展权限列表（根据叶子节点推导父模块权限）
+            const expandedPermissions = expandPermissions(permissions)
+            
             return routes.filter(r => {
                 const perm = r.meta?.permission
 
-                if (!perm) return true
-                if (role === 'admin') return true
-                if (!Array.isArray(permissions)) return false
+                if (!perm && !r.meta?.customCheck) return true
+                if (!Array.isArray(expandedPermissions)) return false
 
-                return permissions.includes(perm)
+                // 如果有自定义检查函数，使用自定义逻辑
+                if (r.meta?.customCheck && typeof r.meta.customCheck === 'function') {
+                    return r.meta.customCheck(expandedPermissions)
+                }
+
+                return expandedPermissions.includes(perm)
             })
         },
 

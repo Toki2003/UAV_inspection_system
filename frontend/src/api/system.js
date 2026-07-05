@@ -54,6 +54,11 @@ export const deleteRole = (id) => {
   return request.delete(`/system/roles/${id}/`)
 }
 
+/** 获取权限树 */
+export const getPermissionTree = () => {
+  return request.get('/system/roles/permission_tree/')
+}
+
 // ── 默认导出 ─────────────────────────────────────────────
 
 export default {
@@ -66,5 +71,6 @@ export default {
   getRoleList,
   createRole,
   updateRole,
-  deleteRole
+  deleteRole,
+  getPermissionTree
 }

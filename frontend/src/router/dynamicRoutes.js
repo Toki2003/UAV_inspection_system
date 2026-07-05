@@ -5,7 +5,11 @@ export const dynamicRoutes = [
         component: () => import('@/views/SystemManage/index.vue'),
         meta: {
             title: '系统管理',
-            permission: 'system:view'
+            // 有角色管理或用户管理的查看权限即可访问
+            permission: null,
+            customCheck: (permissions) => {
+                return permissions.includes('role:view') || permissions.includes('user:view')
+            }
         }
     },
     {

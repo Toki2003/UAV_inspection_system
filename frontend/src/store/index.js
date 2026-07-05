@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
+import { triggerPermissionChange } from './permission'
 
 export const useAppStore = defineStore('app', () => {
   const user = ref(null)
@@ -47,6 +48,8 @@ export const useAppStore = defineStore('app', () => {
   const setPermissions = (perms) => {
     permissions.value = perms || []
     localStorage.setItem('permissions', JSON.stringify(perms || []))
+    // 触发权限变更事件，通知所有组件更新
+    triggerPermissionChange()
   }
 
   // 清除登录信息
