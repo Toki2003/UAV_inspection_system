@@ -18,6 +18,19 @@ from .serializers import (
     DroneCommandSerializer,
 )
 
+from .services.drone_control import (
+    get_telemetry,
+    send_command,
+    get_video,
+    get_dock_overview,
+    get_dock_list,
+    get_safety_status,
+    get_alert_status,
+    request_takeover,
+    get_emqx_status,
+    subscribe_emqx,
+)
+
 
 @api_view(["GET"])
 def overview(request):
@@ -399,23 +412,26 @@ def drone_telemetry(request,device_code):
         return fail(str(exc))
     except Exception as exc:
         return fail(f"获取无人机遥测数据失败: {str(exc)}")
-    
 
 @api_view(["GET"])
 def drone_video(request, device_code):
+    stream_type = request.query_params.get(
+        "streamType",
+        "uav",
+    )
     try:
-        video = get_video(device_code)
-
+        video = get_video(
+            device_code,
+            stream_type,
+        )
         return success(
-            "获取无人机视频流信息成功",
+            "获取视频流信息成功",
             video,
         )
     except ValueError as exc:
         return fail(str(exc))
-    except Exception as exc:
-        return fail(
-            f"获取无人机视频流信息失败：{exc}"
-        )    
+    except Exception:
+        return fail("获取视频流信息失败")
 
 
 @api_view(["POST"])
@@ -449,6 +465,67 @@ def drone_command(request, device_code):
             f"发送无人机控制命令失败：{exc}"
         )
 
+
+@api_view(["GET"])
+def drone_safety(request, device_code):
+    try:
+        return success(
+            "获取无人机安全状态成功",
+            get_safety_status(device_code),
+        )
+    except ValueError as exc:
+        return fail(str(exc))
+    except Exception as exc:
+        return fail(f"获取无人机安全状态失败：{exc}")
+
+
+@api_view(["GET"])
+def drone_alert_status(request, device_code):
+    try:
+        return success(
+            "获取无人机预警状态成功",
+            get_alert_status(device_code),
+        )
+    except ValueError as exc:
+        return fail(str(exc))
+    except Exception as exc:
+        return fail(f"获取无人机预警状态失败：{exc}")
+
+
+@api_view(["POST"])
+def drone_takeover(request, device_code):
+    try:
+        result = request_takeover(device_code)
+        return success(result["message"], result)
+    except ValueError as exc:
+        return fail(str(exc))
+    except Exception as exc:
+        return fail(f"请求人工接管失败：{exc}")
+
+
+@api_view(["GET"])
+def drone_emqx_status(request, device_code):
+    try:
+        return success(
+            "获取EMQX状态成功",
+            get_emqx_status(device_code),
+        )
+    except ValueError as exc:
+        return fail(str(exc))
+    except Exception as exc:
+        return fail(f"获取EMQX状态失败：{exc}")
+
+
+@api_view(["POST"])
+def drone_emqx_subscribe(request, device_code):
+    try:
+        result = subscribe_emqx(device_code)
+        return success(result["message"], result)
+    except ValueError as exc:
+        return fail(str(exc))
+    except Exception as exc:
+        return fail(f"请求EMQX订阅失败：{exc}")
+
 @api_view(["GET"])
 def dock_overview(request):
     try:
@@ -472,4 +549,4 @@ def dock_list(request):
             docks,
         )
     except Exception:
-        return fail("获取机库列表失败")    
+        return fail("获取机库列表失败")

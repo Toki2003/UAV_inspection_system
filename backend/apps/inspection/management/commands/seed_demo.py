@@ -15,6 +15,8 @@ class Command(BaseCommand):
                 "status": "online",
                 "battery_level": 88,
                 "location": "A 区机库",
+                "rtsp_url": ("rtsp://192.168.1.101:554/stream1"),
+                "stream_enabled": True,
             },
             {
                 "code": "UAV-002",
@@ -23,6 +25,8 @@ class Command(BaseCommand):
                 "status": "online",
                 "battery_level": 76,
                 "location": "B 区临时起降点",
+                "rtsp_url": ("rtsp://192.168.1.102:554/stream1"),
+                "stream_enabled": True,
             },
             {
                 "code": "UAV-003",
@@ -31,6 +35,8 @@ class Command(BaseCommand):
                 "status": "maintenance",
                 "battery_level": 42,
                 "location": "维修库",
+                "rtsp_url": ("rtsp://192.168.1.103:554/stream1"),
+                "stream_enabled": False,
             },
         ]
 

@@ -1,362 +1,262 @@
 <template>
-  <section class="drone-control">
-    <!-- 页面标题 -->
-    <div class="page-header">
+  <section class="drone-console">
+    <header class="console-heading">
+      <div class="heading-icon">▦</div>
       <div>
-        <h2>无人机管控</h2>
-        <p>查看无人机实时状态并发送控制命令</p>
+        <span class="eyebrow">UAV INSPECTION CONSOLE</span>
+        <h2>无人机巡检主控台</h2>
+        <p>机场设备选择、实时遥测、视频监控与飞行控制</p>
       </div>
-
-      <div class="header-actions">
-        <el-select
-          v-model="selectedDeviceCode"
-          placeholder="请选择无人机"
-          @change="handleDeviceChange"
-        >
-          <el-option
-            v-for="device in devices"
-            :key="device.code"
-            :label="`${device.name}（${device.code}）`"
-            :value="device.code"
-          />
-        </el-select>
-
-        <el-button
-          type="primary"
-          :loading="telemetryLoading"
-          @click="loadTelemetry"
-        >
-        刷新状态
-        </el-button>
+      <div class="heading-status">
+        <el-tag type="primary">数字主控台</el-tag>
+        <el-tag :type="telemetry?.online ? 'success' : 'danger'">
+          {{ telemetry?.online ? '设备在线' : '设备离线' }}
+        </el-tag>
       </div>
+    </header>
+
+    <div class="console-grid">
+      <AirportList
+        :docks="docks"
+        :selected-device-code="selectedDeviceCode"
+        :loading="dockLoading"
+        @select="handleAirportSelect"
+        @refresh="loadDocks"
+      />
+
+      <VideoMonitor
+        :device-code="selectedDeviceCode"
+        :can-control="canControl"
+        :command-loading="commandLoading"
+        @command="handleCommand"
+        @takeover="handleTakeover"
+      />
     </div>
 
-<!-- 机场监控 -->
-    <DockMonitor />
-
-    <!-- 实时状态 -->
-    <el-card class="panel">
-      <template #header>
-        <div class="panel-header">
-          <span>无人机实时状态</span>
-
-          <el-tag
-            v-if="telemetry"
-            :type="telemetry.online ? 'success' : 'danger'"
+    <div class="information-grid">
+      <section class="status-panel">
+        <div class="panel-heading">
+          <div>
+            <span class="eyebrow">REAL-TIME TELEMETRY</span>
+            <h3>飞行状态数据</h3>
+          </div>
+          <el-button
+            type="primary"
+            link
+            :loading="telemetryLoading"
+            @click="loadTelemetry"
           >
-            {{ telemetry.online ? '在线' : '离线' }}
-          </el-tag>
+            刷新状态
+          </el-button>
         </div>
-      </template>
 
-      <el-descriptions
-        v-if="telemetry"
-        :column="3"
-        border
-      >
-      <el-descriptions-item label="设备编号">
-          {{ telemetry.deviceCode }}
-        </el-descriptions-item>
-
-        <el-descriptions-item label="设备名称">
-          {{ telemetry.deviceName }}
-        </el-descriptions-item>
-
-        <el-descriptions-item label="设备型号">
-          {{ telemetry.deviceModel || '--' }}
-        </el-descriptions-item>
-
-        <el-descriptions-item label="剩余电量">
-          <el-progress
-            :percentage="telemetry.battery"
-            :stroke-width="12"
-          />
-        </el-descriptions-item>
-
-        <el-descriptions-item label="飞行高度">
-          {{ telemetry.height }} 米
-        </el-descriptions-item>
-
-        <el-descriptions-item label="飞行速度">
-          {{ telemetry.speed }} 米/秒
-        </el-descriptions-item>
-
-        <el-descriptions-item label="经度">
-          {{ telemetry.longitude }}
-        </el-descriptions-item>
-
-        <el-descriptions-item label="纬度">
-          {{ telemetry.latitude }}
-        </el-descriptions-item>
-
-        <el-descriptions-item label="当前位置">
-          {{ telemetry.location || '--' }}
-        </el-descriptions-item>
-
-        <el-descriptions-item label="飞行状态">
-          <el-tag type="primary">
-            {{ telemetry.flightStatus }}
-          </el-tag>
-        </el-descriptions-item>
-
-        <el-descriptions-item label="告警状态">
-          <el-tag
-            :type="
-              telemetry.alarmStatus === '正常'
-                ? 'success'
-                : 'danger'
-            "
-          >
-            {{ telemetry.alarmStatus }}
-          </el-tag>
-        </el-descriptions-item>
-
-<el-descriptions-item label="飞行合规">
-  <el-tag
-    :type="
-      telemetry.complianceStatus === '合规'
-        ? 'success'
-        : 'danger'
-    "
-  >
-    {{ telemetry.complianceStatus }}
-  </el-tag>
-</el-descriptions-item>
-
-<el-descriptions-item label="禁飞区状态">
-  <el-tag
-    :type="
-      telemetry.inNoFlyZone
-        ? 'danger'
-        : 'success'
-    "
-  >
-    {{
-      telemetry.inNoFlyZone
-        ? '位于禁飞区'
-        : '未进入禁飞区'
-    }}
-  </el-tag>
-</el-descriptions-item>
-
-<el-descriptions-item label="传输安全">
-  <el-tag
-    :type="
-      telemetry.encrypted
-        ? 'success'
-        : 'warning'
-    "
-  >
-    {{
-      telemetry.encrypted
-        ? '已加密'
-        : '未加密'
-    }}
-  </el-tag>
-</el-descriptions-item>
-
-        <el-descriptions-item label="更新时间">
-          {{ formatTime(telemetry.updateTime) }}
-        </el-descriptions-item>
-      </el-descriptions>
-
-      <el-empty
-        v-else
-        description="暂未获取无人机状态"
-      />
-    </el-card>
-
-    <!-- 视频区域 -->
-    <el-card class="panel">
-      <template #header>
-        <div class="panel-header">
-          <span>实时视频</span>
-
-          <el-tag
-            v-if="videoInfo"
-            :type="
-              videoInfo.videoAvailable
-                ? 'success'
-                : 'danger'
-            "
-          >
-            {{
-              videoInfo.videoAvailable
-                ? '视频流可用'
-                : '视频流不可用'
-            }}
-          </el-tag>
+        <div v-if="telemetry" class="telemetry-grid">
+          <div class="data-tile">
+            <span>设备编号</span>
+            <strong>{{ telemetry.deviceCode }}</strong>
+          </div>
+          <div class="data-tile">
+            <span>飞行状态</span>
+            <strong>{{ telemetry.flightStatus }}</strong>
+          </div>
+          <div class="data-tile">
+            <span>剩余电量</span>
+            <strong>{{ telemetry.battery }}%</strong>
+          </div>
+          <div class="data-tile">
+            <span>飞行高度</span>
+            <strong>{{ telemetry.height }} m</strong>
+          </div>
+          <div class="data-tile">
+            <span>飞行速度</span>
+            <strong>{{ telemetry.speed }} m/s</strong>
+          </div>
+          <div class="data-tile">
+            <span>当前位置</span>
+            <strong>{{ telemetry.location || '--' }}</strong>
+          </div>
+          <div class="data-tile coordinate">
+            <span>经纬度</span>
+            <strong>{{ telemetry.longitude }}, {{ telemetry.latitude }}</strong>
+          </div>
+          <div class="data-tile coordinate">
+            <span>更新时间</span>
+            <strong>{{ formatTime(telemetry.updateTime) }}</strong>
+          </div>
         </div>
-      </template>
 
-      <div class="video-container">
-        <div class="video-placeholder">
-          <span class="video-title">
-            实时视频预留区域
-          </span>
+        <el-empty v-else description="暂未获取无人机状态" />
+      </section>
 
-          <span v-if="videoInfo">
-            视频协议：
-            {{ videoInfo.videoProtocol }}
-          </span>
-
-          <span v-if="videoInfo">
-            视频地址：
-            {{ videoInfo.videoUrl }}
-          </span>
-
-          <span class="video-note">
-            当前仅预留视频流地址，后期接入FLV播放器
-          </span>
+      <section class="safety-panel">
+        <div class="panel-heading">
+          <div>
+            <span class="eyebrow">SAFETY ASSURANCE</span>
+            <h3>安全保障与消息接入</h3>
+          </div>
         </div>
-      </div>
-    </el-card>
 
-    <!-- 飞行控制 -->
-    <el-card class="panel">
-      <template #header>
-        <span>飞行控制</span>
-      </template>
+        <div class="safety-list">
+          <div class="safety-item">
+            <span>异常安全预警</span>
+            <el-tag :type="alertStatus?.level === 'normal' ? 'success' : 'danger'">
+              {{ alertStatus?.status || '未知' }}
+            </el-tag>
+          </div>
+          <div class="safety-item">
+            <span>飞行合规控制</span>
+            <el-tag :type="safetyStatus?.complianceStatus === '合规' ? 'success' : 'danger'">
+              {{ safetyStatus?.complianceStatus || '未知' }}
+            </el-tag>
+          </div>
+          <div class="safety-item">
+            <span>禁飞区规避</span>
+            <el-tag :type="safetyStatus?.inNoFlyZone ? 'danger' : 'success'">
+              {{ safetyStatus?.inNoFlyZone ? '位于禁飞区' : '未进入禁飞区' }}
+            </el-tag>
+          </div>
+          <div class="safety-item">
+            <span>数据加密传输</span>
+            <el-tag :type="safetyStatus?.encrypted ? 'success' : 'warning'">
+              {{ safetyStatus?.encrypted ? '已加密' : '未加密' }}
+            </el-tag>
+          </div>
+          <div class="safety-item">
+            <span>EMQX消息通道</span>
+            <div class="safety-actions">
+              <el-tag :type="emqxStatus?.connected ? 'success' : 'warning'">
+                {{ emqxStatus?.connected ? '已连接' : '接口预留' }}
+              </el-tag>
+              <el-button
+                type="primary"
+                link
+                :disabled="!selectedDeviceCode"
+                @click="handleEmqxSubscribe"
+              >
+                请求订阅
+              </el-button>
+            </div>
+          </div>
+          <div class="safety-item">
+            <span>遥测数据来源</span>
+            <el-tag type="primary">Mock数据</el-tag>
+          </div>
+        </div>
+      </section>
+    </div>
 
-      <div class="command-buttons">
-        <el-button
-          type="danger"
-          :loading="commandLoading"
-          :disabled="!canControl"
-          @click="handleCommand('RETURN_HOME')"
-        >
-          返航
-        </el-button>
-
-        <el-button
-          :loading="commandLoading"
-          :disabled="!canControl"
-          @click="
-            handleCommand('CANCEL_RETURN_HOME')
-          "
-        >
-          取消返航
-        </el-button>
-
-        <el-button
-          type="warning"
-          :loading="commandLoading"
-          :disabled="!canControl"
-          @click="handleCommand('PAUSE')"
-        >
-          暂停
-        </el-button>
-
-        <el-button
-          type="success"
-          :loading="commandLoading"
-          :disabled="!canControl"
-          @click="handleCommand('RESUME')"
-        >
-          恢复
-        </el-button>
-
-        <el-button
-          type="primary"
-          :loading="commandLoading"
-          :disabled="!canControl"
-          @click="
-            handleCommand('START_INSPECTION')
-          "
-        >
-          开始检测
-        </el-button>
-      </div>
-
-      <el-alert
-        v-if="telemetry && !telemetry.online"
-        title="当前无人机离线，无法发送控制命令"
-        type="warning"
-        :closable="false"
-        show-icon
-        class="offline-alert"
-      />
-    </el-card>
+    <el-alert
+      v-if="telemetry && !telemetry.online"
+      title="当前无人机离线，飞行控制命令已禁用"
+      type="warning"
+      :closable="false"
+      show-icon
+      class="offline-alert"
+    />
   </section>
 </template>
 
 <script setup>
-import {
-  computed,
-  onMounted,
-  onUnmounted,
-  ref
-} from 'vue'
-import {
-  ElMessage,
-  ElMessageBox
-} from 'element-plus'
-import DockMonitor from './DockMonitor.vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
 
+import AirportList from './AirportList.vue'
+import VideoMonitor from './VideoMonitor.vue'
 import { getDeviceList } from '@/api/inspection'
 import {
+  getDockList,
+  getDroneAlertStatus,
+  getDroneEmqxStatus,
+  getDroneSafety,
   getDroneTelemetry,
-  getDroneVideo,
+  requestDroneTakeover,
+  subscribeDroneEmqx,
   sendDroneCommand
 } from '@/api/droneControl'
 
-
 const devices = ref([])
-
-
+const docks = ref([])
 const selectedDeviceCode = ref('')
-
 const telemetry = ref(null)
-
-const videoInfo = ref(null)
-
+const safetyStatus = ref(null)
+const alertStatus = ref(null)
+const emqxStatus = ref(null)
 const telemetryLoading = ref(false)
+const dockLoading = ref(false)
 const commandLoading = ref(false)
 
 let telemetryTimer = null
+let dockTimer = null
 
 const canControl = computed(() => {
   return Boolean(
     selectedDeviceCode.value &&
-    telemetry.value &&
-    telemetry.value.online
+    telemetry.value?.online
   )
 })
 
-async function loadDevices() {
+async function loadInitialData() {
   try {
-    const response = await getDeviceList()
+    const [deviceResponse, dockResponse] = await Promise.all([
+      getDeviceList(),
+      getDockList()
+    ])
 
-    if (response.code !== 200) {
-      ElMessage.error(response.message)
+    if (deviceResponse.code !== 200) {
+      ElMessage.error(deviceResponse.message)
       return
     }
 
-    devices.value = response.data || []
+    devices.value = deviceResponse.data || []
 
-    if (devices.value.length === 0) {
-      ElMessage.warning('当前没有可用设备')
-      return
+    if (dockResponse.code === 200) {
+      docks.value = dockResponse.data || []
+    } else {
+      ElMessage.error(dockResponse.message)
     }
 
-    // 优先选择在线设备
-    const onlineDevice = devices.value.find(
-      device => device.status === 'online'
-    )
+    const selectableDock = docks.value.find(dock => {
+      return dock.status === 'online' && dock.droneCode
+    })
 
-    selectedDeviceCode.value = onlineDevice
-      ? onlineDevice.code
-      : devices.value[0].code
+    const onlineDevice = devices.value.find(device => {
+      return device.status === 'online'
+    })
 
-    await loadDroneData()
+    selectedDeviceCode.value = selectableDock?.droneCode
+      || onlineDevice?.code
+      || devices.value[0]?.code
+      || ''
+
+    await loadDeviceStatus()
   } catch (error) {
     console.error(error)
-    ElMessage.error('获取设备列表失败')
+    ElMessage.error('获取主控台初始化数据失败')
+  }
+}
+
+async function loadDocks() {
+  dockLoading.value = true
+
+  try {
+    const response = await getDockList()
+
+    if (response.code === 200) {
+      docks.value = response.data || []
+    } else {
+      ElMessage.error(response.message)
+    }
+  } catch (error) {
+    console.error(error)
+    ElMessage.error('获取机场列表失败')
+  } finally {
+    dockLoading.value = false
   }
 }
 
 async function loadTelemetry() {
   if (!selectedDeviceCode.value) {
+    telemetry.value = null
     return
   }
 
@@ -370,61 +270,63 @@ async function loadTelemetry() {
     if (response.code === 200) {
       telemetry.value = response.data
     } else {
+      telemetry.value = null
       ElMessage.error(response.message)
     }
   } catch (error) {
     console.error(error)
-    ElMessage.error('获取无人机状态失败')
+    telemetry.value = null
+    ElMessage.error('获取无人机遥测状态失败')
   } finally {
     telemetryLoading.value = false
   }
 }
 
-async function loadVideo() {
-  if (!selectedDeviceCode.value) {
-    return
-  }
+async function loadDeviceStatus() {
+  if (!selectedDeviceCode.value) return
 
-  try {
-    const response = await getDroneVideo(
-      selectedDeviceCode.value
-    )
-
-    if (response.code === 200) {
-      videoInfo.value = response.data
-    } else {
-      ElMessage.error(response.message)
-    }
-  } catch (error) {
-    console.error(error)
-    ElMessage.error('获取视频地址失败')
-  }
-}
-
-async function loadDroneData() {
-  await Promise.all([
+  const [telemetryResult, safetyResult, alertResult, emqxResult] = await Promise.all([
     loadTelemetry(),
-    loadVideo()
+    getDroneSafety(selectedDeviceCode.value),
+    getDroneAlertStatus(selectedDeviceCode.value),
+    getDroneEmqxStatus(selectedDeviceCode.value)
   ])
+
+  if (safetyResult.code === 200) {
+    safetyStatus.value = safetyResult.data
+  }
+
+  if (alertResult.code === 200) {
+    alertStatus.value = alertResult.data
+  }
+
+  if (emqxResult.code === 200) {
+    emqxStatus.value = emqxResult.data
+  }
+
+  return telemetryResult
 }
 
-async function handleDeviceChange() {
+async function handleAirportSelect(deviceCode) {
+  if (!deviceCode || deviceCode === selectedDeviceCode.value) return
+  selectedDeviceCode.value = deviceCode
   telemetry.value = null
-  videoInfo.value = null
-
-  await loadDroneData()
+  safetyStatus.value = null
+  alertStatus.value = null
+  emqxStatus.value = null
+  await loadDeviceStatus()
 }
 
 async function handleCommand(command) {
-  if (!selectedDeviceCode.value) {
-    ElMessage.warning('请先选择无人机')
+  if (!canControl.value) {
+    ElMessage.warning('当前设备离线或尚未选择无人机')
     return
   }
 
   try {
     await ElMessageBox.confirm(
-      `确认向设备 ${selectedDeviceCode.value} 发送该控制命令吗？`,
-      '控制确认',
+      `确认向设备 ${selectedDeviceCode.value} 发送控制命令吗？`,
+      '飞行控制确认',
       {
         confirmButtonText: '确认发送',
         cancelButtonText: '取消',
@@ -445,8 +347,6 @@ async function handleCommand(command) {
 
     if (response.code === 200) {
       ElMessage.success(response.data.message)
-
-      // 命令执行后重新查询状态
       await loadTelemetry()
     } else {
       ElMessage.error(response.message)
@@ -459,132 +359,227 @@ async function handleCommand(command) {
   }
 }
 
-function formatTime(timestamp) {
-  if (!timestamp) {
-    return '--'
-  }
+async function handleTakeover() {
+  if (!selectedDeviceCode.value) return
 
+  try {
+    const response = await requestDroneTakeover(
+      selectedDeviceCode.value
+    )
+    if (response.code === 200) {
+      ElMessage.info(response.data.message)
+    } else {
+      ElMessage.error(response.message)
+    }
+  } catch (error) {
+    console.error(error)
+    ElMessage.error('请求人工接管接口失败')
+  }
+}
+
+async function handleEmqxSubscribe() {
+  if (!selectedDeviceCode.value) return
+
+  try {
+    const response = await subscribeDroneEmqx(
+      selectedDeviceCode.value
+    )
+    if (response.code === 200) {
+      emqxStatus.value = response.data
+      ElMessage.info(response.data.message)
+    } else {
+      ElMessage.error(response.message)
+    }
+  } catch (error) {
+    console.error(error)
+    ElMessage.error('请求EMQX订阅接口失败')
+  }
+}
+
+function formatTime(timestamp) {
+  if (!timestamp) return '--'
   return new Date(timestamp).toLocaleString()
 }
 
-function startTelemetryTimer() {
-  stopTelemetryTimer()
-
-  telemetryTimer = window.setInterval(() => {
-    loadTelemetry()
-  }, 5000)
-}
-
-function stopTelemetryTimer() {
-  if (telemetryTimer) {
-    window.clearInterval(telemetryTimer)
-    telemetryTimer = null
-  }
-}
-
 onMounted(async () => {
-  await loadDevices()
-  startTelemetryTimer()
+  await loadInitialData()
+  telemetryTimer = window.setInterval(loadTelemetry, 5000)
+  dockTimer = window.setInterval(loadDocks, 10000)
 })
 
 onUnmounted(() => {
-  stopTelemetryTimer()
+  window.clearInterval(telemetryTimer)
+  window.clearInterval(dockTimer)
 })
 </script>
 
 <style scoped>
-.drone-control {
-  width: 100%;
+.drone-console {
+  min-height: 100%;
+  color: #303133;
 }
 
-.page-header {
+.console-heading,
+.heading-status,
+.panel-heading {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 20px;
-  margin-bottom: 20px;
 }
 
-.page-header h2 {
-  margin: 0 0 8px;
+.console-heading {
+  gap: 14px;
+  margin-bottom: 18px;
+  padding: 16px 20px;
+  background: #ffffff;
+  border: 1px solid #ebeef5;
+  border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
 }
 
-.page-header p {
+.heading-icon {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  color: #eafaff;
+  font-size: 25px;
+  place-items: center;
+  background: #409eff;
+  border-radius: 10px;
+  box-shadow: 0 4px 12px rgba(64, 158, 255, 0.28);
+}
+
+.console-heading h2,
+.panel-heading h3 {
+  margin: 3px 0;
+}
+
+.console-heading p {
   margin: 0;
   color: #909399;
 }
 
-.header-actions {
-  display: flex;
-  align-items: center;
+.heading-status {
+  gap: 8px;
+  margin-left: auto;
+}
+
+.eyebrow {
+  color: #409eff;
+  font-size: 10px;
+  letter-spacing: 1.8px;
+}
+
+.console-grid {
+  display: grid;
+  grid-template-columns: minmax(310px, 360px) minmax(0, 1fr);
+  gap: 16px;
+}
+
+.information-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(300px, 1fr);
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.status-panel,
+.safety-panel {
+  padding: 18px;
+  background: #ffffff;
+  border: 1px solid #ebeef5;
+  border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+}
+
+.panel-heading {
+  justify-content: space-between;
   gap: 12px;
+  margin-bottom: 15px;
 }
 
-.header-actions .el-select {
-  width: 240px;
+.telemetry-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
 }
 
-.panel {
-  margin-bottom: 20px;
+.data-tile {
+  display: grid;
+  gap: 6px;
+  min-height: 64px;
+  padding: 12px;
+  background: #fafafa;
+  border: 1px solid #ebeef5;
+  border-radius: 8px;
 }
 
-.panel-header {
+.data-tile span {
+  color: #909399;
+  font-size: 12px;
+}
+
+.data-tile strong {
+  overflow: hidden;
+  color: #303133;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.data-tile.coordinate {
+  grid-column: span 2;
+}
+
+.safety-list {
+  display: grid;
+  gap: 10px;
+}
+
+.safety-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  color: #606266;
+  background: #fafafa;
+  border: 1px solid #ebeef5;
+  border-radius: 7px;
 }
 
-.video-placeholder {
+.safety-actions {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 12px;
-  min-height: 360px;
-  padding: 20px;
-  color: #c0c4cc;
-  background: #1d1e1f;
-  border-radius: 6px;
-}
-
-.video-title {
-  color: #ffffff;
-  font-size: 20px;
-  font-weight: 600;
-}
-
-.video-note {
-  color: #909399;
-  font-size: 13px;
-}
-
-.command-buttons {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-}
-
-.command-buttons .el-button {
-  margin-left: 0;
+  gap: 8px;
 }
 
 .offline-alert {
-  margin-top: 20px;
+  margin-top: 16px;
 }
 
-@media (max-width: 768px) {
-  .page-header {
+@media (max-width: 820px) {
+  .console-grid,
+  .information-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 700px) {
+  .console-heading {
     align-items: flex-start;
-    flex-direction: column;
+    flex-wrap: wrap;
   }
 
-  .header-actions {
+  .heading-status {
     width: 100%;
+    margin-left: 0;
   }
 
-  .header-actions .el-select {
-    flex: 1;
-    width: auto;
+  .telemetry-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .data-tile.coordinate {
+    grid-column: span 2;
   }
 }
 </style>

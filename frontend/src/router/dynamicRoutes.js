@@ -26,7 +26,7 @@ export const dynamicRoutes = [
         name: 'DroneControl',
         component: () => import('@/views/DroneControl/index.vue'),
         meta: {
-            title: '无人机管控',
+            title: '主控台',
             permission: 'drone:view'
         }
     }
