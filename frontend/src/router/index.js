@@ -99,8 +99,9 @@ router.beforeEach((to, from, next) => {
 })
 
 /**
- * 向后端验证 token 是否有效
- * 调用 /api/system/userinfo 接口，检查响应 body 中的 code 是否为 200
+ * 向后端验证 token 是否有效，并同步最新权限
+ * 调用 /api/system/userinfo 接口，同时更新 user 和 permissions
+ * 确保权限以后端返回为准，不依赖 localStorage 缓存
  */
 function verifyToken(store) {
   return fetch('/api/system/userinfo', {
@@ -111,6 +112,10 @@ function verifyToken(store) {
       // 后端返回 { code: 200, data: {...} } 才视为有效
       if (data.code === 200 && data.data) {
         store.setUser(data.data)
+        // 关键：同步后端最新权限，不依赖 localStorage
+        if (data.data.permissions) {
+          store.setPermissions(data.data.permissions)
+        }
         return true
       }
       return false
