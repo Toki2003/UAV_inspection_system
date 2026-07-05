@@ -23,7 +23,6 @@ const store = useAppStore()
 store.initAuth()
 
 // 若有已保存的 token，在挂载 router 前预加载动态路由
-// 避免 router install 解析当前 URL 时因动态路由未注册而产生警告
 if (store.token) {
   const role = store.user?.role?.name || 'user'
   const permissions = store.permissions || []

@@ -51,16 +51,13 @@ router.beforeEach((to, from, next) => {
   const store = useAppStore()
   const token = store.token || localStorage.getItem('token')
 
-  // 1. 未登录且非公开页面 → 拦截到登录页
   if (!to.meta.public && !token) {
     return next('/login')
   }
 
-  // 2. 已登录但还未验证 token 有效性 → 向后端验证
   if (token && !tokenVerified) {
     return verifyToken(store).then(valid => {
       if (!valid) {
-        // token 无效，清除本地数据，跳转登录
         store.clearAuth()
         tokenVerified = false
         return next('/login')
@@ -68,7 +65,6 @@ router.beforeEach((to, from, next) => {
 
       tokenVerified = true
 
-      // 3. token 有效，加载动态路由
       const permissionStore = usePermissionStore()
       if (!permissionStore.routesAdded) {
         const role = store.user?.role?.name || 'user'
@@ -85,7 +81,6 @@ router.beforeEach((to, from, next) => {
     })
   }
 
-  // 4. 已验证 + 加载动态路由
   const permissionStore = usePermissionStore()
   if (token && !permissionStore.routesAdded) {
     const role = store.user?.role?.name || 'user'
@@ -94,7 +89,6 @@ router.beforeEach((to, from, next) => {
     return next({ ...to, replace: true })
   }
 
-  // 5. 正常放行
   next()
 })
 
