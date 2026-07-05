@@ -2,11 +2,17 @@
 权限管理模块 - 路由配置
 
 接口前缀: /api/system/
-- login/: 登录
-- logout/: 登出
-- userinfo/: 当前用户信息
-- roles/: 角色管理
-- users/: 用户管理
+
+认证接口（无需登录）：
+  POST login      用户登录，返回 token + 用户信息 + 权限列表
+  POST logout     用户登出，清除服务端 token
+
+用户信息接口（需登录）：
+  GET  userinfo   实时从数据库读取当前用户信息和权限
+
+CRUD 接口（需登录，由 DefaultRouter 自动生成 RESTful 路由）：
+  /roles/         角色管理（RoleViewSet）
+  /users/         用户管理（SysUserViewSet）
 """
 
 from django.urls import path, include
@@ -14,14 +20,12 @@ from rest_framework.routers import DefaultRouter
 from .views import RoleViewSet, SysUserViewSet, login_view, logout_view, userinfo_view
 
 router = DefaultRouter()
-router.register(r'roles', RoleViewSet)    # 角色管理
-router.register(r'users', SysUserViewSet) # 用户管理
+router.register(r'roles', RoleViewSet)
+router.register(r'users', SysUserViewSet)
 
 urlpatterns = [
-    # 登录认证（不需要登录）
     path('login', login_view, name='system-login'),
     path('logout', logout_view, name='system-logout'),
     path('userinfo', userinfo_view, name='system-userinfo'),
-    # CRUD 路由
     path('', include(router.urls)),
 ]
